@@ -13,6 +13,7 @@ const StoryViewer = ({ storyGroup, currentUserId, onClose }) => {
   const [viewers, setViewers] = useState(null)
   const [showViewers, setShowViewers] = useState(false)
   const progressRef = useRef(null)
+  const videoRef = useRef(null)
   const currentStory = stories[currentIndex]
   const isOwner = currentUserId === storyUser.uid
 
@@ -20,6 +21,9 @@ const StoryViewer = ({ storyGroup, currentUserId, onClose }) => {
     if (!currentStory) return
     recordStoryView(currentStory.storyId, currentUserId).catch(() => {})
     setProgress(0)
+
+    if (currentStory.type === 'video') return
+
     const startTime = Date.now()
     progressRef.current = setInterval(() => {
       if (paused) return
@@ -31,8 +35,22 @@ const StoryViewer = ({ storyGroup, currentUserId, onClose }) => {
     return () => clearInterval(progressRef.current)
   }, [currentIndex, paused])
 
-  const goNext = () => { if (currentIndex < stories.length - 1) setCurrentIndex(i => i + 1); else onClose() }
-  const goPrev = () => { if (currentIndex > 0) setCurrentIndex(i => i - 1) }
+  const handleVideoTimeUpdate = () => {
+    if (!videoRef.current) return
+    const pct = (videoRef.current.currentTime / videoRef.current.duration) * 100
+    setProgress(pct)
+  }
+
+  const goNext = () => {
+    clearInterval(progressRef.current)
+    if (currentIndex < stories.length - 1) setCurrentIndex(i => i + 1)
+    else onClose()
+  }
+
+  const goPrev = () => {
+    clearInterval(progressRef.current)
+    if (currentIndex > 0) setCurrentIndex(i => i - 1)
+  }
 
   const handleTap = (e) => {
     const x = e.clientX
@@ -76,7 +94,17 @@ const StoryViewer = ({ storyGroup, currentUserId, onClose }) => {
       </div>
       <div className="story-content">
         {currentStory.type === 'image' && <img src={currentStory.mediaURL} alt="Story" className="story-media" draggable={false} />}
-        {currentStory.type === 'video' && <video src={currentStory.mediaURL} className="story-media" autoPlay muted playsInline onEnded={goNext} />}
+        {currentStory.type === 'video' && (
+          <video
+            ref={videoRef}
+            src={currentStory.mediaURL}
+            className="story-media"
+            autoPlay
+            playsInline
+            onEnded={goNext}
+            onTimeUpdate={handleVideoTimeUpdate}
+          />
+        )}
         {currentStory.type === 'text' && (
           <div className="story-text-card" style={{ background: currentStory.backgroundColor || '#6C4DFF', color: currentStory.textColor || '#fff' }}>
             <p>{currentStory.text}</p>

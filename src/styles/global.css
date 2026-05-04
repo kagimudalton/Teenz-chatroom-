@@ -282,3 +282,41 @@ input,textarea{font-family:inherit;color:inherit}
   border-style: dashed;
 }
 .wallpaper-item.uploading { opacity: 0.6; cursor: not-allowed; }
+
+/* ─── WALLPAPER FIX ─── */
+.messages-container {
+  position: relative;
+  background-clip: padding-box;
+}
+
+.messages-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: inherit;
+  z-index: 0;
+}
+
+.messages-container > * {
+  position: relative;
+  z-index: 1;
+}
+
+.msg-bubble.mine {
+  background: linear-gradient(135deg, #6C4DFF, #8B6FFF) !important;
+  box-shadow: 0 2px 12px rgba(108,77,255,0.35);
+}
+
+.msg-bubble.theirs {
+  background: rgba(0,0,0,0.45) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.date-separator span {
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(8px);
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 0.72rem;
+}
