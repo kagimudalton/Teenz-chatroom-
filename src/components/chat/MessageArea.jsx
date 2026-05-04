@@ -1,17 +1,21 @@
 import { useState, useRef } from 'react'
 import { useMessages } from '../../hooks/useMessages.js'
 import { useAuth } from '../../features/auth/AuthContext.jsx'
+import { useWallpaper } from '../../hooks/useWallpaper.js'
 import { sendTextMessage, sendMediaMessage, deleteMessageForUser } from '../../services/chatService.js'
 import { formatTime, getStatusIcon } from '../../utils/helpers.js'
 import UserAvatar from '../ui/UserAvatar.jsx'
+import WallpaperPicker from './WallpaperPicker.jsx'
 import toast from 'react-hot-toast'
 
 const MessageArea = ({ conversationId, otherUser, onBackToSidebar }) => {
   const { user } = useAuth()
   const { messages, loading, bottomRef } = useMessages(conversationId)
+  const { wallpaper, updateWallpaper } = useWallpaper()
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const [showMediaMenu, setShowMediaMenu] = useState(false)
+  const [showWallpaper, setShowWallpaper] = useState(false)
   const imageInputRef = useRef(null)
   const videoInputRef = useRef(null)
 
@@ -47,10 +51,24 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar }) => {
     }
   }
 
+  const getWallpaperStyle = () => {
+    if (!wallpaper) return {}
+    if (wallpaper.type === 'image') return { backgroundImage: `url(${wallpaper.value})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    return { background: wallpaper.value }
+  }
+
   const groupedMessages = groupByDate(messages)
 
   return (
     <div className="message-area" onClick={() => setShowMediaMenu(false)}>
+      {showWallpaper && (
+        <WallpaperPicker
+          currentWallpaper={wallpaper}
+          onClose={() => setShowWallpaper(false)}
+          onWallpaperChange={(wp) => { updateWallpaper(wp); setShowWallpaper(false) }}
+        />
+      )}
+
       <div className="msg-header">
         <button className="back-to-sidebar" onClick={onBackToSidebar}>←</button>
         <div className="msg-header-user">
@@ -60,9 +78,12 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar }) => {
             <div className="msg-header-status">{otherUser.isOnline ? '🟢 Online' : 'Offline'}</div>
           </div>
         </div>
+        <div className="msg-header-actions">
+          <button className="call-btn" onClick={() => setShowWallpaper(true)} title="Change wallpaper">🎨</button>
+        </div>
       </div>
 
-      <div className="messages-container">
+      <div className="messages-container" style={getWallpaperStyle()}>
         {loading ? <div className="messages-loading">Loading…</div> : messages.length === 0 ? (
           <div className="messages-empty"><p>No messages yet!</p><p>Say hi to {otherUser.username} 👋</p></div>
         ) : groupedMessages.map((group) => (

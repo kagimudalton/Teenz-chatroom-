@@ -220,3 +220,65 @@ input,textarea{font-family:inherit;color:inherit}
   .auth-card{padding:28px 20px}
   .msg-bubble{max-width:88%}
 }
+
+/* ─── WALLPAPER PICKER ─── */
+.wallpaper-picker { max-width: 500px; }
+.wallpaper-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+.wallpaper-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  position: relative;
+}
+.wallpaper-preview {
+  width: 100%;
+  aspect-ratio: 9/16;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  transition: border-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  overflow: hidden;
+}
+.wallpaper-item.selected .wallpaper-preview {
+  border-color: var(--accent-purple);
+  box-shadow: 0 0 12px var(--accent-purple-glow);
+}
+.wallpaper-name {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+.wallpaper-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 20px;
+  height: 20px;
+  background: var(--accent-purple);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: #fff;
+  font-weight: 700;
+}
+.custom-preview {
+  background: var(--surface);
+  border-style: dashed;
+}
+.wallpaper-item.uploading { opacity: 0.6; cursor: not-allowed; }
