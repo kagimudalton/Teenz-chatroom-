@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../features/auth/AuthContext.jsx'
 import { useConversations } from '../hooks/useConversations.js'
 import ConversationList from '../components/chat/ConversationList.jsx'
@@ -6,14 +6,22 @@ import MessageArea from '../components/chat/MessageArea.jsx'
 import StoriesBar from '../components/stories/StoriesBar.jsx'
 import NewChatModal from '../components/chat/NewChatModal.jsx'
 import UserAvatar from '../components/ui/UserAvatar.jsx'
+import ThemePicker from '../components/ui/ThemePicker.jsx'
+import { loadUserTheme } from '../services/themeService.js'
 
 const ChatPage = () => {
-  const { userProfile, logout } = useAuth()
+  const { userProfile, logout, user } = useAuth()
   const { conversations, loading: convsLoading } = useConversations()
   const [activeConversationId, setActiveConversationId] = useState(null)
   const [activeOtherUser, setActiveOtherUser] = useState(null)
   const [showNewChat, setShowNewChat] = useState(false)
+  const [showThemePicker, setShowThemePicker] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+
+  // Load user's saved theme on startup
+  useEffect(() => {
+    if (user) loadUserTheme(user.uid)
+  }, [user])
 
   const handleSelectConversation = (conv) => {
     setActiveConversationId(conv.id)
@@ -30,30 +38,68 @@ const ChatPage = () => {
 
   return (
     <div className="chat-page">
-      {showNewChat && <NewChatModal onClose={() => setShowNewChat(false)} onStartConversation={handleNewConversation} />}
+      {showNewChat && (
+        <NewChatModal
+          onClose={() => setShowNewChat(false)}
+          onStartConversation={handleNewConversation}
+        />
+      )}
+
+      {showThemePicker && (
+        <ThemePicker onClose={() => setShowThemePicker(false)} />
+      )}
+
       <aside className={`chat-sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
           <div className="sidebar-brand">Teenz<span>Chat</span></div>
           <div className="sidebar-user">
             <UserAvatar user={userProfile} size={34} />
+            <button
+              className="theme-toggle-btn"
+              onClick={() => setShowThemePicker(true)}
+              title="Change theme"
+            >
+              🎨
+            </button>
             <button className="logout-btn" onClick={logout} title="Sign out">⎋</button>
           </div>
         </div>
+
         <StoriesBar />
+
         <div className="sidebar-actions">
-          <button className="new-chat-btn" onClick={() => setShowNewChat(true)}>✏️ New Chat</button>
+          <button className="new-chat-btn" onClick={() => setShowNewChat(true)}>
+            ✏️ New Chat
+          </button>
         </div>
-        <ConversationList conversations={conversations} loading={convsLoading} activeId={activeConversationId} onSelect={handleSelectConversation} />
+
+        <ConversationList
+          conversations={conversations}
+          loading={convsLoading}
+          activeId={activeConversationId}
+          onSelect={handleSelectConversation}
+        />
       </aside>
+
       <main className="chat-main">
         {activeConversationId && activeOtherUser ? (
-          <MessageArea conversationId={activeConversationId} otherUser={activeOtherUser} onBackToSidebar={() => setSidebarOpen(true)} />
+          <MessageArea
+            conversationId={activeConversationId}
+            otherUser={activeOtherUser}
+            onBackToSidebar={() => setSidebarOpen(true)}
+          />
         ) : (
           <div className="chat-empty-state">
             <div className="empty-state-icon">💬</div>
             <h2>Pick a chat or start a new one</h2>
             <p>Your conversations will appear here</p>
-            <button className="auth-submit-btn" style={{ maxWidth: 200, margin: '0 auto' }} onClick={() => setShowNewChat(true)}>Start chatting</button>
+            <button
+              className="auth-submit-btn"
+              style={{ maxWidth: 200, margin: '0 auto' }}
+              onClick={() => setShowNewChat(true)}
+            >
+              Start chatting
+            </button>
           </div>
         )}
       </main>
