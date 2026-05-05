@@ -320,3 +320,172 @@ input,textarea{font-family:inherit;color:inherit}
   border-radius: 99px;
   font-size: 0.72rem;
 }
+
+/* ─── CRITICAL FIXES ─── */
+
+/* Fix wallpaper bleeding outside chat */
+.message-area {
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.messages-container {
+  overflow: hidden;
+  overflow-y: auto;
+}
+
+/* Fix profile pic visibility */
+.conv-avatar-wrap img,
+.msg-header-user img,
+.story-circle img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+/* Bigger clearer nav arrows */
+.back-to-sidebar {
+  font-size: 1.8rem !important;
+  font-weight: 900 !important;
+  color: var(--text-primary) !important;
+  width: 40px;
+  height: 40px;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+}
+
+/* Last seen indicator */
+.msg-header-status {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.msg-header-status.online {
+  color: #4CAF50;
+}
+
+/* Edit message indicator */
+.msg-edited {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.45);
+  margin-left: 4px;
+  font-style: italic;
+}
+
+/* Story ring fix - show for all accounts */
+.story-circle.has-story {
+  padding: 2px;
+  background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+  border-radius: 50%;
+}
+
+.story-circle.has-story > * {
+  border: 2px solid #0a0818;
+  border-radius: 50%;
+}
+
+/* PWA install button */
+.pwa-install-btn {
+  position: fixed;
+  bottom: 80px;
+  right: 16px;
+  background: var(--accent-purple);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-full);
+  padding: 10px 18px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-glow);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+/* ─── EDIT MESSAGE ─── */
+.edit-bar {
+  background: rgba(108,77,255,0.15);
+  border-top: 1px solid var(--accent-purple);
+  padding: 8px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.edit-bar span {
+  font-size: 0.78rem;
+  color: var(--accent-purple);
+  font-weight: 600;
+}
+.edit-bar-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.edit-input {
+  flex: 1;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--accent-purple);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  outline: none;
+}
+.edit-save-btn {
+  padding: 8px 16px;
+  background: var(--accent-purple);
+  color: #fff;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.edit-cancel-btn {
+  padding: 8px 12px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* ─── HEADER DROPDOWN ─── */
+.header-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 8px;
+  background: rgba(20,16,50,0.98);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  z-index: 50;
+  min-width: 160px;
+  box-shadow: var(--shadow-float);
+  animation: slideUp 0.15s ease;
+}
+.header-dropdown button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  width: 100%;
+  font-size: 0.9rem;
+  text-align: left;
+  transition: background var(--transition);
+}
+.header-dropdown button:hover {
+  background: var(--surface-hover);
+}
+
+/* ─── MSG EDITED TAG ─── */
+.msg-edited {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.45);
+  margin-left: 4px;
+  font-style: italic;
+}

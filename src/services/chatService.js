@@ -39,30 +39,53 @@ const sendMessage = async (conversationId, messageData) => {
 }
 
 export const markMessagesAsRead = async (conversationId, currentUserId) => {
-  const q = query(collection(db, 'conversations', conversationId, 'messages'), where('receiverId', '==', currentUserId), where('status', '!=', 'read'))
-  const snap = await getDocs(q)
-  if (snap.empty) return
-  const batch = writeBatch(db)
-  snap.docs.forEach((d) => batch.update(d.ref, { status: 'read' }))
-  batch.update(doc(db, 'conversations', conversationId), { [`unreadCount.${currentUserId}`]: 0 })
-  await batch.commit()
+  try {
+    const q = query(collection(db, 'conversations', conversationId, 'messages'), where('receiverId', '==', currentUserId), where('status', '!=', 'read'))
+    const snap = await getDocs(q)
+    if (snap.empty) return
+    const batch = writeBatch(db)
+    snap.docs.forEach((d) => batch.update(d.ref, { status: 'read' }))
+    batch.update(doc(db, 'conversations', conversationId), { [`unreadCount.${currentUserId}`]: 0 })
+    await batch.commit()
+  } catch (err) {
+    console.warn('markMessagesAsRead failed:', err)
+  }
 }
 
 export const subscribeToMessages = (conversationId, callback, messageLimit = 50) => {
   const q = query(collection(db, 'conversations', conversationId, 'messages'), orderBy('createdAt', 'asc'), limit(messageLimit))
-  return onSnapshot(q, (snapshot) => { callback(snapshot.docs.map((d) => ({ ...d.data(), id: d.id }))) })
+  return onSnapshot(q, (snapshot) => { callback(snapshot.docs.map((d) => ({ ...d.data(), id: d.id }))) }, (err) => { console.warn('Messages listener error:', err) })
 }
 
 export const subscribeToConversations = (userId, callback) => {
-  const q = query(collection(db, 'conversations'), where('participants', 'array-contains', userId), orderBy('lastMessageAt', 'desc'))
+  const q = query(
+    collection(db, 'conversations'),
+    where('participants', 'array-contains', userId),
+    orderBy('lastMessageAt', 'desc')
+  )
   return onSnapshot(q, async (snapshot) => {
-    const conversations = await Promise.all(snapshot.docs.map(async (d) => {
-      const conv = d.data()
-      const otherUserId = conv.participants.find((p) => p !== userId)
-      const otherUserSnap = await getDoc(doc(db, 'users', otherUserId))
-      return { ...conv, id: d.id, otherUser: otherUserSnap.exists() ? otherUserSnap.data() : null }
-    }))
-    callback(conversations)
+    try {
+      const conversations = await Promise.all(
+        snapshot.docs.map(async (d) => {
+          const conv = d.data()
+          const otherUserId = conv.participants.find((p) => p !== userId)
+          if (!otherUserId) return null
+          try {
+            const otherUserSnap = await getDoc(doc(db, 'users', otherUserId))
+            return { ...conv, id: d.id, otherUser: otherUserSnap.exists() ? otherUserSnap.data() : { uid: otherUserId, username: 'Unknown' } }
+          } catch {
+            return { ...conv, id: d.id, otherUser: { uid: otherUserId, username: 'Unknown' } }
+          }
+        })
+      )
+      callback(conversations.filter(Boolean))
+    } catch (err) {
+      console.warn('Conversations listener error:', err)
+      callback([])
+    }
+  }, (err) => {
+    console.warn('Conversations snapshot error:', err)
+    callback([])
   })
 }
 
@@ -75,4 +98,9 @@ export const searchUsers = async (searchTerm, currentUserId) => {
 
 export const deleteMessageForUser = async (conversationId, messageId, userId) => {
   await updateDoc(doc(db, 'conversations', conversationId, 'messages', messageId), { deletedFor: arrayUnion(userId) })
+}
+
+export const editMessage = async (conversationId, messageId, newText) => {
+  const msgRef = doc(db, 'conversations', conversationId, 'messages', messageId)
+  await updateDoc(msgRef, { text: newText, edited: true, editedAt: serverTimestamp() })
 }
