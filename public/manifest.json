@@ -1,12 +1,13 @@
 {
-  "name": "Teenz Chat",
+  "name": "Teenz Chatroom",
   "short_name": "TeenzChat",
-  "description": "A modern, secure chat platform for teens",
+  "description": "Chat. Connect. Vibe. The modern chat platform for teens.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0F0C29",
   "theme_color": "#6C4DFF",
   "orientation": "portrait",
+  "categories": ["social", "communication"],
   "icons": [
     {
       "src": "/favicon.svg",
@@ -14,5 +15,8 @@
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "screenshots": [],
+  "related_applications": [],
+  "prefer_related_applications": false
 }
