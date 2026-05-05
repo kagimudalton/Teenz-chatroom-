@@ -3,13 +3,13 @@ import { useMessages } from '../../hooks/useMessages.js'
 import { useAuth } from '../../features/auth/AuthContext.jsx'
 import { useWallpaper } from '../../hooks/useWallpaper.js'
 import { sendTextMessage, sendMediaMessage, editMessage } from '../../services/chatService.js'
-import { subscribeToUserStatus, formatLastSeen, reportUser, blockUser } from '../../services/userService.js'
+import { subscribeToUserStatus, formatLastSeen, reportUser } from '../../services/userService.js'
 import { formatTime, getStatusIcon } from '../../utils/helpers.js'
 import UserAvatar from '../ui/UserAvatar.jsx'
 import WallpaperPicker from './WallpaperPicker.jsx'
 import toast from 'react-hot-toast'
 
-const MessageArea = ({ conversationId, otherUser, onBackToSidebar }) => {
+const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }) => {
   const { user } = useAuth()
   const { messages, loading, bottomRef } = useMessages(conversationId)
   const { wallpaper, updateWallpaper } = useWallpaper()
@@ -24,7 +24,6 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar }) => {
   const imageInputRef = useRef(null)
   const videoInputRef = useRef(null)
 
-  // Subscribe to other user's online status
   useEffect(() => {
     if (!otherUser?.uid) return
     const unsubscribe = subscribeToUserStatus(otherUser.uid, setUserStatus)
@@ -92,7 +91,6 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar }) => {
   }
 
   const statusText = userStatus.isOnline ? '🟢 Online' : formatLastSeen(userStatus.lastSeen)
-
   const groupedMessages = groupByDate(messages)
 
   return (
@@ -105,7 +103,6 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar }) => {
         />
       )}
 
-      {/* Header */}
       <div className="msg-header">
         <button className="back-to-sidebar" onClick={onBackToSidebar}>←</button>
         <div className="msg-header-user">
@@ -118,20 +115,19 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar }) => {
           </div>
         </div>
         <div className="msg-header-actions">
-          <button className="call-btn" onClick={() => setShowWallpaper(true)} title="Wallpaper">🎨</button>
+          <button className="call-btn audio" onClick={() => onStartCall('audio')} title="Voice call">📞</button>
+          <button className="call-btn video" onClick={() => onStartCall('video')} title="Video call">📹</button>
           <button className="call-btn" onClick={(e) => { e.stopPropagation(); setShowMenu(v => !v) }} title="More">⋮</button>
         </div>
 
-        {/* Dropdown menu */}
         {showMenu && (
           <div className="header-dropdown" onClick={e => e.stopPropagation()}>
-            <button onClick={handleReport}>🚩 Report</button>
             <button onClick={() => { setShowWallpaper(true); setShowMenu(false) }}>🎨 Wallpaper</button>
+            <button onClick={handleReport}>🚩 Report</button>
           </div>
         )}
       </div>
 
-      {/* Messages */}
       <div className="messages-container" style={getWallpaperStyle()}>
         {loading ? <div className="messages-loading">Loading…</div> : messages.length === 0 ? (
           <div className="messages-empty"><p>No messages yet!</p><p>Say hi to {otherUser.username} 👋</p></div>
@@ -150,7 +146,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar }) => {
                   }}
                 >
                   {msg.type === 'text' && <p className="msg-text">{msg.text}{msg.edited && <span className="msg-edited">(edited)</span>}</p>}
-                  {msg.type === 'image' && <img src={msg.mediaURL} alt="Shared image" className="msg-image" loading="lazy" onClick={() => window.open(msg.mediaURL, '_blank')} />}
+                  {msg.type === 'image' && <img src={msg.mediaURL} alt="Shared" className="msg-image" loading="lazy" onClick={() => window.open(msg.mediaURL, '_blank')} />}
                   {msg.type === 'video' && <video src={msg.mediaURL} controls className="msg-video" preload="metadata" />}
                   {msg.type === 'audio' && <div className="msg-audio"><span>🎤</span><audio src={msg.mediaURL} controls /></div>}
                   <div className="msg-meta">
@@ -165,25 +161,17 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar }) => {
         <div ref={bottomRef} />
       </div>
 
-      {/* Edit message bar */}
       {editingMsg && (
         <div className="edit-bar">
           <span>✏️ Editing message</span>
           <div className="edit-bar-actions">
-            <input
-              className="edit-input"
-              value={editText}
-              onChange={e => setEditText(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleEditMessage()}
-              autoFocus
-            />
+            <input className="edit-input" value={editText} onChange={e => setEditText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleEditMessage()} autoFocus />
             <button className="edit-save-btn" onClick={handleEditMessage}>Save</button>
             <button className="edit-cancel-btn" onClick={() => { setEditingMsg(null); setEditText('') }}>✕</button>
           </div>
         </div>
       )}
 
-      {/* Input bar */}
       <form className="msg-input-bar" onSubmit={handleSendText}>
         <div className="media-menu-wrap">
           <button type="button" className="media-menu-btn" onClick={(e) => { e.stopPropagation(); setShowMediaMenu(v => !v) }}>📎</button>

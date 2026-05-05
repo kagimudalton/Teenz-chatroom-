@@ -683,3 +683,244 @@ input,textarea{font-family:inherit;color:inherit}
 .splash-screen.animate .splash-loader {
   opacity: 1;
 }
+
+/* ─── CALL MODAL ─── */
+.call-modal {
+  position: fixed;
+  inset: 0;
+  background: #0a0818;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+}
+
+.call-remote {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.remote-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.call-avatar-bg {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: radial-gradient(circle at 50% 40%, rgba(108,77,255,0.25), transparent 70%);
+}
+
+.call-avatar-ring {
+  padding: 4px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+  animation: ringPulse 2s ease-in-out infinite;
+}
+
+@keyframes ringPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(108,77,255,0.4); }
+  50% { box-shadow: 0 0 0 16px rgba(108,77,255,0); }
+}
+
+.call-name {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #fff;
+  font-family: var(--font-display);
+}
+
+.call-state-label {
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.6);
+}
+
+.call-state-label.pulse {
+  animation: textPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes textPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.call-local {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 110px;
+  height: 160px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 2px solid rgba(255,255,255,0.2);
+  box-shadow: var(--shadow-float);
+}
+
+.local-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cam-off-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 1.5rem;
+}
+
+.cam-off-overlay p {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.6);
+}
+
+.call-controls {
+  padding: 20px 24px 32px;
+  background: rgba(10,8,24,0.9);
+  backdrop-filter: blur(16px);
+}
+
+.call-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+}
+
+.call-ctrl-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.call-ctrl-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255,255,255,0.15);
+  transition: all var(--transition);
+}
+
+.call-ctrl-btn:hover { background: rgba(255,255,255,0.2); transform: scale(1.05); }
+.call-ctrl-btn.active-ctrl { background: rgba(255,255,255,0.25); }
+.call-ctrl-btn.hang-up {
+  background: #FF4444;
+  border-color: transparent;
+  box-shadow: 0 0 20px rgba(255,68,68,0.5);
+  width: 68px;
+  height: 68px;
+  font-size: 1.7rem;
+}
+.call-ctrl-btn.hang-up:hover { background: #ff2222; transform: scale(1.08); }
+
+.call-ctrl-label {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.5);
+}
+
+/* ─── INCOMING CALL BANNER ─── */
+.incoming-call-banner {
+  position: fixed;
+  top: -140px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 92%;
+  max-width: 400px;
+  background: rgba(15,12,41,0.98);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-xl);
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: var(--shadow-float);
+  z-index: 400;
+  transition: top 0.4s cubic-bezier(0.4,0,0.2,1);
+}
+
+.incoming-call-banner.visible { top: 16px; }
+
+.incoming-call-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.incoming-avatar {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.call-type-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent-purple);
+  border: 2px solid rgba(15,12,41,0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+}
+
+.incoming-call-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.incoming-call-type {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.incoming-call-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.reject-call-btn, .accept-call-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  font-size: 1.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--transition);
+}
+
+.reject-call-btn {
+  background: #FF4444;
+  box-shadow: 0 0 14px rgba(255,68,68,0.4);
+}
+
+.accept-call-btn {
+  background: #4CAF50;
+  box-shadow: 0 0 14px rgba(76,175,80,0.4);
+}
+
+.reject-call-btn:hover, .accept-call-btn:hover {
+  transform: scale(1.1);
+}
