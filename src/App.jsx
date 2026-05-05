@@ -5,6 +5,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import SignupPage from './pages/SignupPage.jsx'
 import ChatPage from './pages/ChatPage.jsx'
+import SplashScreen from './components/ui/SplashScreen.jsx'
 import './styles/global.css'
 
 const App = () => {
@@ -14,7 +15,9 @@ const App = () => {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
-          <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
+          <Route path="/chat" element={
+            <ProtectedRoute><ChatPage /></ProtectedRoute>
+          } />
           <Route path="/" element={<Navigate to="/chat" replace />} />
           <Route path="*" element={<Navigate to="/chat" replace />} />
         </Routes>
