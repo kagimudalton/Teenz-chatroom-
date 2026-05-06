@@ -8,6 +8,7 @@ import { formatTime, getStatusIcon } from '../../utils/helpers.js'
 import UserAvatar from '../ui/UserAvatar.jsx'
 import WallpaperPicker from './WallpaperPicker.jsx'
 import EmojiPicker from './EmojiPicker.jsx'
+import MessageReactions from './MessageReactions.jsx'
 import toast from 'react-hot-toast'
 
 const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }) => {
@@ -68,6 +69,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
     } else {
       setText(prev => prev + emoji)
     }
+    setShowEmoji(false)
   }
 
   const handleMediaUpload = async (file, type) => {
@@ -153,10 +155,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
         )}
       </div>
 
-      <div
-        className={`messages-container ${hasWallpaper ? 'has-wallpaper' : ''}`}
-        style={getWallpaperStyle()}
-      >
+      <div className={`messages-container ${hasWallpaper ? 'has-wallpaper' : ''}`} style={getWallpaperStyle()}>
         {loading ? (
           <div className="messages-loading">Loading…</div>
         ) : messages.length === 0 ? (
@@ -211,6 +210,10 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
                     )}
                   </div>
                 </div>
+                <MessageReactions
+                  message={msg}
+                  conversationId={conversationId}
+                />
               </div>
             ))}
           </div>
@@ -222,13 +225,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
         <div className="edit-bar">
           <span>✏️ Editing message</span>
           <div className="edit-bar-actions">
-            <input
-              className="edit-input"
-              value={editText}
-              onChange={e => setEditText(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleEditMessage()}
-              autoFocus
-            />
+            <input className="edit-input" value={editText} onChange={e => setEditText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleEditMessage()} autoFocus />
             <button className="edit-save-btn" onClick={handleEditMessage}>Save</button>
             <button className="edit-cancel-btn" onClick={() => { setEditingMsg(null); setEditText('') }}>✕</button>
           </div>
@@ -245,25 +242,12 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
             </div>
           )}
         </div>
-
         <input type="file" ref={imageInputRef} accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files[0] && handleMediaUpload(e.target.files[0], 'image')} />
         <input type="file" ref={videoInputRef} accept="video/*" style={{ display: 'none' }} onChange={e => e.target.files[0] && handleMediaUpload(e.target.files[0], 'video')} />
 
-        {/* Emoji button */}
         <div className="emoji-btn-wrap" style={{ position: 'relative', flexShrink: 0 }}>
-          <button
-            type="button"
-            className="emoji-trigger-btn"
-            onClick={(e) => { e.stopPropagation(); setShowEmoji(v => !v); setShowMediaMenu(false) }}
-          >
-            😊
-          </button>
-          {showEmoji && (
-            <EmojiPicker
-              onSelect={handleEmojiSelect}
-              onClose={() => setShowEmoji(false)}
-            />
-          )}
+          <button type="button" className="emoji-trigger-btn" onClick={(e) => { e.stopPropagation(); setShowEmoji(v => !v); setShowMediaMenu(false) }}>😊</button>
+          {showEmoji && <EmojiPicker onSelect={handleEmojiSelect} onClose={() => setShowEmoji(false)} />}
         </div>
 
         <textarea
