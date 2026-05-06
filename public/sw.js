@@ -1,4 +1,4 @@
-const CACHE_NAME = 'teenz-chatroom-v2'
+const CACHE_NAME = 'teenz-chatroom-v1778068335'
 
 self.addEventListener('install', (event) => {
   self.skipWaiting()

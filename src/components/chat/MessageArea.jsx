@@ -7,6 +7,7 @@ import { subscribeToUserStatus, formatLastSeen, reportUser } from '../../service
 import { formatTime, getStatusIcon } from '../../utils/helpers.js'
 import UserAvatar from '../ui/UserAvatar.jsx'
 import WallpaperPicker from './WallpaperPicker.jsx'
+import EmojiPicker from './EmojiPicker.jsx'
 import toast from 'react-hot-toast'
 
 const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }) => {
@@ -18,11 +19,13 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
   const [showMediaMenu, setShowMediaMenu] = useState(false)
   const [showWallpaper, setShowWallpaper] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [showEmoji, setShowEmoji] = useState(false)
   const [userStatus, setUserStatus] = useState({ isOnline: false, lastSeen: null })
   const [editingMsg, setEditingMsg] = useState(null)
   const [editText, setEditText] = useState('')
   const imageInputRef = useRef(null)
   const videoInputRef = useRef(null)
+  const textareaRef = useRef(null)
 
   useEffect(() => {
     if (!otherUser?.uid) return
@@ -48,6 +51,23 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendText(e) }
+  }
+
+  const handleEmojiSelect = (emoji) => {
+    const textarea = textareaRef.current
+    if (textarea) {
+      const start = textarea.selectionStart
+      const end = textarea.selectionEnd
+      const newText = text.slice(0, start) + emoji + text.slice(end)
+      setText(newText)
+      setTimeout(() => {
+        textarea.selectionStart = start + emoji.length
+        textarea.selectionEnd = start + emoji.length
+        textarea.focus()
+      }, 10)
+    } else {
+      setText(prev => prev + emoji)
+    }
   }
 
   const handleMediaUpload = async (file, type) => {
@@ -99,7 +119,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
   const groupedMessages = groupByDate(messages)
 
   return (
-    <div className="message-area" onClick={() => { setShowMediaMenu(false); setShowMenu(false) }}>
+    <div className="message-area" onClick={() => { setShowMediaMenu(false); setShowMenu(false); setShowEmoji(false) }}>
       {showWallpaper && (
         <WallpaperPicker
           currentWallpaper={wallpaper}
@@ -108,7 +128,6 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
         />
       )}
 
-      {/* Header */}
       <div className="msg-header">
         <button className="back-to-sidebar" onClick={onBackToSidebar} />
         <div className="msg-header-user">
@@ -134,7 +153,6 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
         )}
       </div>
 
-      {/* Messages */}
       <div
         className={`messages-container ${hasWallpaper ? 'has-wallpaper' : ''}`}
         style={getWallpaperStyle()}
@@ -200,7 +218,6 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
         <div ref={bottomRef} />
       </div>
 
-      {/* Edit bar */}
       {editingMsg && (
         <div className="edit-bar">
           <span>✏️ Editing message</span>
@@ -218,20 +235,39 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
         </div>
       )}
 
-      {/* Input bar */}
       <form className="msg-input-bar" onSubmit={handleSendText}>
         <div className="media-menu-wrap">
-          <button type="button" className="media-menu-btn" onClick={(e) => { e.stopPropagation(); setShowMediaMenu(v => !v) }} />
+          <button type="button" className="media-menu-btn" onClick={(e) => { e.stopPropagation(); setShowMediaMenu(v => !v); setShowEmoji(false) }} />
           {showMediaMenu && (
             <div className="media-menu" onClick={e => e.stopPropagation()}>
-              <button type="button" onClick={() => imageInputRef.current?.click()}>🖼️ Image</button>
-              <button type="button" onClick={() => videoInputRef.current?.click()}>🎬 Video</button>
+              <button type="button" onClick={() => { imageInputRef.current?.click(); setShowMediaMenu(false) }}>🖼️ Image</button>
+              <button type="button" onClick={() => { videoInputRef.current?.click(); setShowMediaMenu(false) }}>🎬 Video</button>
             </div>
           )}
         </div>
+
         <input type="file" ref={imageInputRef} accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files[0] && handleMediaUpload(e.target.files[0], 'image')} />
         <input type="file" ref={videoInputRef} accept="video/*" style={{ display: 'none' }} onChange={e => e.target.files[0] && handleMediaUpload(e.target.files[0], 'video')} />
+
+        {/* Emoji button */}
+        <div className="emoji-btn-wrap" style={{ position: 'relative', flexShrink: 0 }}>
+          <button
+            type="button"
+            className="emoji-trigger-btn"
+            onClick={(e) => { e.stopPropagation(); setShowEmoji(v => !v); setShowMediaMenu(false) }}
+          >
+            😊
+          </button>
+          {showEmoji && (
+            <EmojiPicker
+              onSelect={handleEmojiSelect}
+              onClose={() => setShowEmoji(false)}
+            />
+          )}
+        </div>
+
         <textarea
+          ref={textareaRef}
           className="msg-input"
           value={text}
           onChange={e => setText(e.target.value)}

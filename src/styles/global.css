@@ -1528,3 +1528,25 @@ img[referrerpolicy="no-referrer"] {
 
 .msg-call-icon { font-size: 1.1rem; }
 .msg-call-text { font-size: 0.88rem; }
+
+/* ─── EMOJI TRIGGER BUTTON ─── */
+.emoji-trigger-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition), transform var(--transition);
+  flex-shrink: 0;
+}
+
+.emoji-trigger-btn:hover {
+  background: var(--surface-hover);
+  transform: scale(1.1);
+}
+
+/* ─── FORCE SW UPDATE - CLEAR CACHE ─── */
