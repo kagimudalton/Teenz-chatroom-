@@ -28,19 +28,43 @@ const StoriesBar = () => {
     }
   }
 
+  const myStoryGroup = storiesByUser.find(g => g.user.uid === user.uid)
   const othersStories = storiesByUser.filter(g => g.user.uid !== user.uid)
 
   return (
     <>
       <div className="stories-bar">
-        <label className="story-add-btn" title={uploading ? 'Uploading…' : 'Add story'}>
-          <input type="file" accept="image/*,video/*" onChange={handleAddStory} disabled={uploading} style={{ display: 'none' }} />
-          <div className="story-circle add-story">
-            <UserAvatar user={userProfile} size={48} />
-            <div className="add-story-plus">{uploading ? '…' : '+'}</div>
-          </div>
-          <span className="story-label">Your story</span>
-        </label>
+        {/* My story — tap to view if exists, tap + to add */}
+        <div className="my-story-wrap">
+          {myStoryGroup ? (
+            <button
+              className="story-item"
+              onClick={() => setViewingStories(myStoryGroup)}
+            >
+              <div className="story-circle has-story">
+                <UserAvatar user={userProfile} size={48} />
+              </div>
+              <span className="story-label">My story</span>
+            </button>
+          ) : null}
+          <label className="story-add-btn" title={uploading ? 'Uploading…' : 'Add story'}>
+            <input
+              type="file"
+              accept="image/*,video/*"
+              onChange={handleAddStory}
+              disabled={uploading}
+              style={{ display: 'none' }}
+            />
+            <div className="story-circle add-story">
+              {!myStoryGroup && <UserAvatar user={userProfile} size={48} />}
+              {myStoryGroup && <span style={{fontSize:'1.4rem'}}>➕</span>}
+              <div className="add-story-plus">{uploading ? '…' : '+'}</div>
+            </div>
+            {!myStoryGroup && <span className="story-label">Add story</span>}
+          </label>
+        </div>
+
+        {/* Others stories */}
         {loading ? (
           [...Array(3)].map((_, i) => (
             <div key={i} className="story-item skeleton">
@@ -50,7 +74,11 @@ const StoriesBar = () => {
           ))
         ) : (
           othersStories.map(({ user: storyUser, stories }) => (
-            <button key={storyUser.uid} className="story-item" onClick={() => setViewingStories({ user: storyUser, stories })}>
+            <button
+              key={storyUser.uid}
+              className="story-item"
+              onClick={() => setViewingStories({ user: storyUser, stories })}
+            >
               <div className="story-circle has-story">
                 <UserAvatar user={storyUser} size={48} />
               </div>
@@ -59,8 +87,13 @@ const StoriesBar = () => {
           ))
         )}
       </div>
+
       {viewingStories && (
-        <StoryViewer storyGroup={viewingStories} currentUserId={user.uid} onClose={() => setViewingStories(null)} />
+        <StoryViewer
+          storyGroup={viewingStories}
+          currentUserId={user.uid}
+          onClose={() => setViewingStories(null)}
+        />
       )}
     </>
   )
