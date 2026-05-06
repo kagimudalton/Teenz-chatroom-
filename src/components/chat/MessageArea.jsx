@@ -77,7 +77,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
   const handleReport = async () => {
     try {
       await reportUser(user.uid, otherUser.uid, 'Reported by user')
-      toast.success('User reported')
+      toast.success('User reported ✅')
       setShowMenu(false)
     } catch {
       toast.error('Failed to report')
@@ -85,12 +85,17 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
   }
 
   const getWallpaperStyle = () => {
-    if (!wallpaper) return {}
-    if (wallpaper.type === 'image') return { backgroundImage: `url(${wallpaper.value})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    if (!wallpaper || wallpaper.id === 'default') return {}
+    if (wallpaper.type === 'image') return {
+      backgroundImage: `url(${wallpaper.value})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    }
     return { background: wallpaper.value }
   }
 
-  const statusText = userStatus.isOnline ? '🟢 Online' : formatLastSeen(userStatus.lastSeen)
+  const hasWallpaper = wallpaper && wallpaper.id !== 'default'
+  const statusText = userStatus.isOnline ? 'Online' : formatLastSeen(userStatus.lastSeen)
   const groupedMessages = groupByDate(messages)
 
   return (
@@ -103,10 +108,11 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
         />
       )}
 
+      {/* Header */}
       <div className="msg-header">
-        <button className="back-to-sidebar" onClick={onBackToSidebar}>←</button>
+        <button className="back-to-sidebar" onClick={onBackToSidebar} />
         <div className="msg-header-user">
-          <UserAvatar user={otherUser} size={38} />
+          <UserAvatar user={otherUser} size={38} showViewer={true} />
           <div>
             <div className="msg-header-name">{otherUser.username}</div>
             <div className={`msg-header-status ${userStatus.isOnline ? 'online' : ''}`}>
@@ -115,9 +121,9 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
           </div>
         </div>
         <div className="msg-header-actions">
-          <button className="call-btn audio" onClick={() => onStartCall('audio')} title="Voice call">📞</button>
-          <button className="call-btn video" onClick={() => onStartCall('video')} title="Video call">📹</button>
-          <button className="call-btn" onClick={(e) => { e.stopPropagation(); setShowMenu(v => !v) }} title="More">⋮</button>
+          <button className="call-btn audio" onClick={() => onStartCall('audio')} title="Voice call" />
+          <button className="call-btn video" onClick={() => onStartCall('video')} title="Video call" />
+          <button className="call-btn" onClick={(e) => { e.stopPropagation(); setShowMenu(v => !v) }} title="More" />
         </div>
 
         {showMenu && (
@@ -128,9 +134,18 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
         )}
       </div>
 
-      <div className="messages-container" style={getWallpaperStyle()}>
-        {loading ? <div className="messages-loading">Loading…</div> : messages.length === 0 ? (
-          <div className="messages-empty"><p>No messages yet!</p><p>Say hi to {otherUser.username} 👋</p></div>
+      {/* Messages */}
+      <div
+        className={`messages-container ${hasWallpaper ? 'has-wallpaper' : ''}`}
+        style={getWallpaperStyle()}
+      >
+        {loading ? (
+          <div className="messages-loading">Loading…</div>
+        ) : messages.length === 0 ? (
+          <div className="messages-empty">
+            <p>No messages yet!</p>
+            <p>Say hi to {otherUser.username} 👋</p>
+          </div>
         ) : groupedMessages.map((group) => (
           <div key={group.dateLabel}>
             <div className="date-separator"><span>{group.dateLabel}</span></div>
@@ -145,13 +160,37 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
                     }
                   }}
                 >
-                  {msg.type === 'text' && <p className="msg-text">{msg.text}{msg.edited && <span className="msg-edited">(edited)</span>}</p>}
-                  {msg.type === 'image' && <img src={msg.mediaURL} alt="Shared" className="msg-image" loading="lazy" onClick={() => window.open(msg.mediaURL, '_blank')} />}
-                  {msg.type === 'video' && <video src={msg.mediaURL} controls className="msg-video" preload="metadata" />}
-                  {msg.type === 'audio' && <div className="msg-audio"><span>🎤</span><audio src={msg.mediaURL} controls /></div>}
+                  {msg.type === 'text' && (
+                    <p className="msg-text">
+                      {msg.text}
+                      {msg.edited && <span className="msg-edited"> (edited)</span>}
+                    </p>
+                  )}
+                  {msg.type === 'image' && (
+                    <img src={msg.mediaURL} alt="Shared" className="msg-image" loading="lazy" onClick={() => window.open(msg.mediaURL, '_blank')} />
+                  )}
+                  {msg.type === 'video' && (
+                    <video src={msg.mediaURL} controls className="msg-video" preload="metadata" />
+                  )}
+                  {msg.type === 'audio' && (
+                    <div className="msg-audio">
+                      <span>🎤</span>
+                      <audio src={msg.mediaURL} controls />
+                    </div>
+                  )}
+                  {msg.type === 'call' && (
+                    <div className="msg-call">
+                      <span className="msg-call-icon">
+                        {msg.callStatus === 'missed' ? '📵' : msg.callType === 'video' ? '📹' : '📞'}
+                      </span>
+                      <span className="msg-call-text">{msg.text}</span>
+                    </div>
+                  )}
                   <div className="msg-meta">
                     <span className="msg-time">{formatTime(msg.createdAt)}</span>
-                    {msg.senderId === user.uid && <span className={`msg-status ${msg.status}`}>{getStatusIcon(msg.status)}</span>}
+                    {msg.senderId === user.uid && (
+                      <span className={`msg-status ${msg.status}`}>{getStatusIcon(msg.status)}</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -161,20 +200,28 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
         <div ref={bottomRef} />
       </div>
 
+      {/* Edit bar */}
       {editingMsg && (
         <div className="edit-bar">
           <span>✏️ Editing message</span>
           <div className="edit-bar-actions">
-            <input className="edit-input" value={editText} onChange={e => setEditText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleEditMessage()} autoFocus />
+            <input
+              className="edit-input"
+              value={editText}
+              onChange={e => setEditText(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleEditMessage()}
+              autoFocus
+            />
             <button className="edit-save-btn" onClick={handleEditMessage}>Save</button>
             <button className="edit-cancel-btn" onClick={() => { setEditingMsg(null); setEditText('') }}>✕</button>
           </div>
         </div>
       )}
 
+      {/* Input bar */}
       <form className="msg-input-bar" onSubmit={handleSendText}>
         <div className="media-menu-wrap">
-          <button type="button" className="media-menu-btn" onClick={(e) => { e.stopPropagation(); setShowMediaMenu(v => !v) }}>📎</button>
+          <button type="button" className="media-menu-btn" onClick={(e) => { e.stopPropagation(); setShowMediaMenu(v => !v) }} />
           {showMediaMenu && (
             <div className="media-menu" onClick={e => e.stopPropagation()}>
               <button type="button" onClick={() => imageInputRef.current?.click()}>🖼️ Image</button>
@@ -184,8 +231,16 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
         </div>
         <input type="file" ref={imageInputRef} accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files[0] && handleMediaUpload(e.target.files[0], 'image')} />
         <input type="file" ref={videoInputRef} accept="video/*" style={{ display: 'none' }} onChange={e => e.target.files[0] && handleMediaUpload(e.target.files[0], 'video')} />
-        <textarea className="msg-input" value={text} onChange={e => setText(e.target.value)} onKeyDown={handleKeyDown} placeholder={`Message ${otherUser.username}…`} rows={1} maxLength={2000} />
-        <button type="submit" className={`send-btn ${text.trim() ? 'active' : ''}`} disabled={!text.trim() || sending}>{sending ? '…' : '➤'}</button>
+        <textarea
+          className="msg-input"
+          value={text}
+          onChange={e => setText(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={`Message ${otherUser.username}…`}
+          rows={1}
+          maxLength={2000}
+        />
+        <button type="submit" className={`send-btn ${text.trim() ? 'active' : ''}`} disabled={!text.trim() || sending} />
       </form>
     </div>
   )

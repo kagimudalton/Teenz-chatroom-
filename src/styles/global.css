@@ -1215,3 +1215,113 @@ img[referrerpolicy="no-referrer"] {
   background-size: contain;
   flex-shrink: 0;
 }
+
+/* ─── FINAL WALLPAPER FIX ─── */
+.chat-page {
+  background: var(--bg-gradient) !important;
+}
+
+.chat-sidebar {
+  background: rgba(15,12,41,0.95) !important;
+  backdrop-filter: blur(20px) !important;
+}
+
+.chat-main {
+  background: var(--bg-gradient) !important;
+}
+
+.message-area {
+  background: var(--bg-gradient) !important;
+}
+
+/* Wallpaper ONLY inside messages scroll area */
+.messages-container {
+  background: transparent !important;
+}
+
+.messages-container.has-wallpaper {
+  background-size: cover !important;
+  background-position: center !important;
+  background-attachment: local !important;
+}
+
+/* Sidebar never gets wallpaper */
+.chat-sidebar * {
+  background-image: none !important;
+}
+
+.stories-bar,
+.conv-list,
+.sidebar-header,
+.sidebar-actions {
+  background: transparent !important;
+}
+
+/* ─── PROFILE PIC SIZE FIX ─── */
+.search-result-item .result-avatar {
+  width: 46px !important;
+  height: 46px !important;
+  flex-shrink: 0;
+}
+
+/* Fix huge avatar in search */
+.search-result-item > div:first-child {
+  width: 46px !important;
+  height: 46px !important;
+  flex-shrink: 0 !important;
+}
+
+/* ─── CLICKABLE PROFILE PIC ─── */
+.profile-pic-viewer {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.95);
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+.profile-pic-viewer img {
+  width: min(90vw, 90vh);
+  height: min(90vw, 90vh);
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.2);
+}
+
+.profile-pic-viewer-name {
+  margin-top: 16px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.profile-pic-viewer-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+}
+
+/* Avatar always proper size */
+.msg-header-user > div:first-child {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.msg-header-user > div:first-child:hover {
+  opacity: 0.85;
+}
