@@ -104,3 +104,19 @@ export const editMessage = async (conversationId, messageId, newText) => {
   const msgRef = doc(db, 'conversations', conversationId, 'messages', messageId)
   await updateDoc(msgRef, { text: newText, edited: true, editedAt: serverTimestamp() })
 }
+
+export const addReaction = async (conversationId, messageId, userId, emoji) => {
+  const msgRef = doc(db, 'conversations', conversationId, 'messages', messageId)
+  const snap = await getDoc(msgRef)
+  if (!snap.exists()) return
+  const reactions = snap.data().reactions || {}
+  const emojiReactions = reactions[emoji] || []
+  let updated
+  if (emojiReactions.includes(userId)) {
+    updated = { ...reactions, [emoji]: emojiReactions.filter(id => id !== userId) }
+  } else {
+    updated = { ...reactions, [emoji]: [...emojiReactions, userId] }
+  }
+  Object.keys(updated).forEach(k => { if (updated[k].length === 0) delete updated[k] })
+  await updateDoc(msgRef, { reactions: updated })
+}
