@@ -11,6 +11,7 @@ import UserAvatar from '../components/ui/UserAvatar.jsx'
 import ThemePicker from '../components/ui/ThemePicker.jsx'
 import CallModal from '../components/calls/CallModal.jsx'
 import IncomingCallBanner from '../components/calls/IncomingCallBanner.jsx'
+import ProfilePage from './ProfilePage.jsx'
 import { loadUserTheme } from '../services/themeService.js'
 
 const ChatPage = () => {
@@ -21,6 +22,7 @@ const ChatPage = () => {
   const [activeOtherUser, setActiveOtherUser] = useState(null)
   const [showNewChat, setShowNewChat] = useState(false)
   const [showThemePicker, setShowThemePicker] = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
   const [showCallModal, setShowCallModal] = useState(false)
   const [callerUser, setCallerUser] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -29,7 +31,6 @@ const ChatPage = () => {
     if (user) loadUserTheme(user.uid)
   }, [user])
 
-  // Fetch caller info when incoming call arrives
   useEffect(() => {
     if (callHook.incomingCall) {
       getUserDocument(callHook.incomingCall.callerId).then(setCallerUser)
@@ -57,7 +58,6 @@ const ChatPage = () => {
 
   return (
     <div className="chat-page">
-      {/* Incoming call banner */}
       {callHook.callState === 'incoming' && callHook.incomingCall && (
         <IncomingCallBanner
           call={callHook.incomingCall}
@@ -67,7 +67,6 @@ const ChatPage = () => {
         />
       )}
 
-      {/* Active call modal */}
       {showCallModal && (
         <CallModal
           callHook={callHook}
@@ -87,19 +86,31 @@ const ChatPage = () => {
         <ThemePicker onClose={() => setShowThemePicker(false)} />
       )}
 
+      {showProfile && (
+        <ProfilePage onClose={() => setShowProfile(false)} />
+      )}
+
       <aside className={`chat-sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
           <div className="sidebar-brand">Teenz<span>Chat</span></div>
           <div className="sidebar-user">
-            <UserAvatar user={userProfile} size={34} />
+            {/* Tap avatar to open profile */}
+            <div onClick={() => setShowProfile(true)} style={{ cursor: 'pointer' }}>
+              <UserAvatar user={userProfile} size={34} />
+            </div>
             <button className="theme-toggle-btn" onClick={() => setShowThemePicker(true)} title="Change theme">🎨</button>
-            <button className="logout-btn" onClick={logout} title="Sign out">⎋</button>
+            <button className="logout-btn" onClick={logout} title="Sign out" />
           </div>
         </div>
+
         <StoriesBar />
+
         <div className="sidebar-actions">
-          <button className="new-chat-btn" onClick={() => setShowNewChat(true)}>✏️ New Chat</button>
+          <button className="new-chat-btn" onClick={() => setShowNewChat(true)}>
+            New Chat
+          </button>
         </div>
+
         <ConversationList
           conversations={conversations}
           loading={convsLoading}
@@ -121,7 +132,11 @@ const ChatPage = () => {
             <div className="empty-state-icon">💬</div>
             <h2>Pick a chat or start a new one</h2>
             <p>Your conversations will appear here</p>
-            <button className="auth-submit-btn" style={{ maxWidth: 200, margin: '0 auto' }} onClick={() => setShowNewChat(true)}>
+            <button
+              className="auth-submit-btn"
+              style={{ maxWidth: 200, margin: '0 auto' }}
+              onClick={() => setShowNewChat(true)}
+            >
               Start chatting
             </button>
           </div>
