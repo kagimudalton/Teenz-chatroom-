@@ -1676,3 +1676,77 @@ img[referrerpolicy="no-referrer"] {
 .msg-bubble-wrap.theirs {
   align-items: flex-start !important;
 }
+
+/* ─── PROFILE PAGE ─── */
+.profile-card {
+  max-width: 440px !important;
+}
+
+.profile-content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.profile-avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-avatar-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.change-photo-btn {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--accent-purple);
+  border: 2px solid rgba(15,12,41,0.9);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-glow);
+}
+
+.profile-email {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.bio-input {
+  width: 100%;
+  padding: 11px 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 0.93rem;
+  color: var(--text-primary);
+  outline: none;
+  resize: none;
+  font-family: var(--font-body);
+  transition: border-color var(--transition);
+}
+
+.bio-input:focus {
+  border-color: var(--accent-purple);
+  box-shadow: 0 0 0 3px var(--accent-purple-glow);
+}
+
+.profile-privacy h3 {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+  font-weight: 600;
+}
