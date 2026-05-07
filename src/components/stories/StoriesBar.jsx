@@ -34,33 +34,21 @@ const StoriesBar = () => {
   return (
     <>
       <div className="stories-bar">
-        {/* My story — tap to view if exists, tap + to add */}
-        <div className="my-story-wrap">
-          {myStoryGroup ? (
-            <button
-              className="story-item"
-              onClick={() => setViewingStories(myStoryGroup)}
-            >
-              <div className="story-circle has-story">
-                <UserAvatar user={userProfile} size={48} />
-              </div>
-              <span className="story-label">My story</span>
-            </button>
-          ) : null}
-          <label className="story-add-btn" title={uploading ? 'Uploading…' : 'Add story'}>
-            <input
-              type="file"
-              accept="image/*,video/*"
-              onChange={handleAddStory}
-              disabled={uploading}
-              style={{ display: 'none' }}
-            />
-            <div className="story-circle add-story">
-              {!myStoryGroup && <UserAvatar user={userProfile} size={48} />}
-              {myStoryGroup && <span style={{fontSize:'1.4rem'}}>➕</span>}
-              <div className="add-story-plus">{uploading ? '…' : '+'}</div>
+        {/* My story */}
+        <div className="story-item-wrap">
+          <button
+            className="story-item"
+            onClick={() => myStoryGroup && setViewingStories(myStoryGroup)}
+          >
+            <div className={`story-circle ${myStoryGroup ? 'has-story' : 'no-story'}`}>
+              <UserAvatar user={userProfile} size={46} />
             </div>
-            {!myStoryGroup && <span className="story-label">Add story</span>}
+            <span className="story-label">My story</span>
+          </button>
+          {/* Small FAB add button */}
+          <label className="story-add-fab" title={uploading ? 'Uploading…' : 'Add story'}>
+            <input type="file" accept="image/*,video/*" onChange={handleAddStory} disabled={uploading} style={{ display: 'none' }} />
+            {uploading ? '⏳' : '+'}
           </label>
         </div>
 
@@ -68,32 +56,24 @@ const StoriesBar = () => {
         {loading ? (
           [...Array(3)].map((_, i) => (
             <div key={i} className="story-item skeleton">
-              <div className="story-circle skeleton-circle" />
+              <div className="story-circle skeleton-circle" style={{ width: 50, height: 50 }} />
               <div className="story-label skeleton-label" />
             </div>
           ))
         ) : (
           othersStories.map(({ user: storyUser, stories }) => (
-            <button
-              key={storyUser.uid}
-              className="story-item"
-              onClick={() => setViewingStories({ user: storyUser, stories })}
-            >
+            <button key={storyUser.uid} className="story-item" onClick={() => setViewingStories({ user: storyUser, stories })}>
               <div className="story-circle has-story">
-                <UserAvatar user={storyUser} size={48} />
+                <UserAvatar user={storyUser} size={46} />
               </div>
-              <span className="story-label">{storyUser.username?.slice(0, 9) || 'User'}</span>
+              <span className="story-label">{storyUser.username?.slice(0, 8) || 'User'}</span>
             </button>
           ))
         )}
       </div>
 
       {viewingStories && (
-        <StoryViewer
-          storyGroup={viewingStories}
-          currentUserId={user.uid}
-          onClose={() => setViewingStories(null)}
-        />
+        <StoryViewer storyGroup={viewingStories} currentUserId={user.uid} onClose={() => setViewingStories(null)} />
       )}
     </>
   )

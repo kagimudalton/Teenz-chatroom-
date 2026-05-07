@@ -6,6 +6,8 @@ const ICE_SERVERS = {
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
   ],
 }
 
@@ -17,13 +19,24 @@ export const initiateCall = async (callerId, receiverId, type = 'video') => {
   peerConnection.onicecandidate = async (event) => {
     if (event.candidate) {
       await addDoc(collection(db, 'calls', callId, 'callerCandidates'), {
-        ...event.candidate.toJSON(),
-        createdAt: serverTimestamp(),
+        ...event.candidate.toJSON(), createdAt: serverTimestamp(),
       })
     }
   }
 
-  const offerDescription = await peerConnection.createOffer()
+  // Log connection state for debugging
+  peerConnection.onconnectionstatechange = () => {
+    console.log('Call connection state:', peerConnection.connectionState)
+  }
+
+  peerConnection.onicegatheringstatechange = () => {
+    console.log('ICE gathering state:', peerConnection.iceGatheringState)
+  }
+
+  const offerDescription = await peerConnection.createOffer({
+    offerToReceiveAudio: true,
+    offerToReceiveVideo: type === 'video',
+  })
   await peerConnection.setLocalDescription(offerDescription)
 
   await setDoc(callRef, {
@@ -48,16 +61,13 @@ export const initiateCall = async (callerId, receiverId, type = 'video') => {
     (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
-          peerConnection.addIceCandidate(new RTCIceCandidate(change.doc.data()))
+          peerConnection.addIceCandidate(new RTCIceCandidate(change.doc.data())).catch(console.warn)
         }
       })
     }
   )
 
-  return {
-    callId, peerConnection,
-    cleanup: () => { unsubscribeAnswer(); unsubscribeReceiverCandidates() },
-  }
+  return { callId, peerConnection, cleanup: () => { unsubscribeAnswer(); unsubscribeReceiverCandidates() } }
 }
 
 export const answerCall = async (callId) => {
@@ -71,10 +81,13 @@ export const answerCall = async (callId) => {
   peerConnection.onicecandidate = async (event) => {
     if (event.candidate) {
       await addDoc(collection(db, 'calls', callId, 'receiverCandidates'), {
-        ...event.candidate.toJSON(),
-        createdAt: serverTimestamp(),
+        ...event.candidate.toJSON(), createdAt: serverTimestamp(),
       })
     }
+  }
+
+  peerConnection.onconnectionstatechange = () => {
+    console.log('Answer connection state:', peerConnection.connectionState)
   }
 
   await peerConnection.setRemoteDescription(new RTCSessionDescription(callData.offer))
@@ -92,7 +105,7 @@ export const answerCall = async (callId) => {
     (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
-          peerConnection.addIceCandidate(new RTCIceCandidate(change.doc.data()))
+          peerConnection.addIceCandidate(new RTCIceCandidate(change.doc.data())).catch(console.warn)
         }
       })
     }
@@ -107,7 +120,11 @@ export const rejectCall = async (callId) => {
 
 export const endCall = async (callId, peerConnection) => {
   if (peerConnection) peerConnection.close()
-  await updateDoc(doc(db, 'calls', callId), { status: 'ended', endedAt: serverTimestamp() })
+  try {
+    await updateDoc(doc(db, 'calls', callId), { status: 'ended', endedAt: serverTimestamp() })
+  } catch (err) {
+    console.warn('endCall error:', err)
+  }
 }
 
 export const subscribeToIncomingCalls = (userId, callback) => {
@@ -125,16 +142,39 @@ export const subscribeToIncomingCalls = (userId, callback) => {
 
 export const getLocalStream = async (videoEnabled = true, audioEnabled = true) => {
   try {
-    return await navigator.mediaDevices.getUserMedia({
-      video: videoEnabled ? { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' } : false,
-      audio: audioEnabled,
+    const constraints = {
+      audio: audioEnabled ? {
+        echoCancellation: true,
+        noiseSuppression: true,
+        sampleRate: 44100,
+        channelCount: 1,
+      } : false,
+      video: videoEnabled ? {
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        facingMode: 'user',
+      } : false,
+    }
+    const stream = await navigator.mediaDevices.getUserMedia(constraints)
+    
+    // Ensure audio tracks are enabled
+    stream.getAudioTracks().forEach(track => {
+      track.enabled = true
+      console.log('Audio track:', track.label, 'enabled:', track.enabled)
     })
+    
+    return stream
   } catch (error) {
-    if (error.name === 'NotAllowedError') throw new Error('Camera/microphone access denied.')
+    console.error('getLocalStream error:', error)
+    if (error.name === 'NotAllowedError') throw new Error('Camera/microphone access denied. Please allow permissions and try again.')
+    if (error.name === 'NotFoundError') throw new Error('No camera or microphone found.')
     throw error
   }
 }
 
 export const addStreamToPeerConnection = (peerConnection, stream) => {
-  stream.getTracks().forEach((track) => peerConnection.addTrack(track, stream))
+  stream.getTracks().forEach((track) => {
+    console.log('Adding track to peer connection:', track.kind, track.label)
+    peerConnection.addTrack(track, stream)
+  })
 }

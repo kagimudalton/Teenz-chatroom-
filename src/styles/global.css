@@ -1750,3 +1750,110 @@ img[referrerpolicy="no-referrer"] {
   margin-bottom: 10px;
   font-weight: 600;
 }
+
+/* ─── STORY FAB BUTTON ─── */
+.story-item-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.story-add-fab {
+  position: absolute;
+  bottom: 18px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent-purple);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 2px solid rgba(15,12,41,0.9);
+  box-shadow: 0 0 8px var(--accent-purple-glow);
+  z-index: 2;
+}
+
+.story-circle.no-story {
+  border: 2px dashed var(--border);
+}
+
+/* ─── MOBILE LAYOUT FIXES ─── */
+.msg-input-bar {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 8px 10px !important;
+  flex-wrap: nowrap !important;
+  min-height: 56px !important;
+}
+
+.msg-input {
+  flex: 1 !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  font-size: 0.9rem !important;
+  padding: 8px 12px !important;
+}
+
+.media-menu-btn,
+.emoji-trigger-btn,
+.send-btn {
+  flex-shrink: 0 !important;
+  width: 36px !important;
+  height: 36px !important;
+}
+
+.emoji-trigger-btn {
+  font-size: 1.1rem !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Fix text overflow everywhere */
+.conv-name,
+.msg-header-name,
+.result-name {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 140px !important;
+}
+
+/* Fix conv item layout */
+.conv-item {
+  min-width: 0 !important;
+}
+
+.conv-info {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Fix stories bar overflow */
+.stories-bar {
+  gap: 8px !important;
+  padding: 10px 12px !important;
+}
+
+.story-circle {
+  width: 50px !important;
+  height: 50px !important;
+}
+
+/* Fix avatar everywhere */
+img[referrerpolicy="no-referrer"] {
+  object-fit: cover !important;
+  border-radius: 50% !important;
+}
+
+/* Fix call audio - ensure not muted */
+.remote-video {
+  -webkit-media-controls: auto !important;
+}
