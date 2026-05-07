@@ -1642,3 +1642,37 @@ img[referrerpolicy="no-referrer"] {
 }
 
 .msg-bubble-wrap:hover .reaction-trigger { opacity: 1; }
+
+/* ─── REACTIONS ALWAYS VISIBLE ─── */
+.reaction-trigger {
+  opacity: 1 !important;
+  width: 24px !important;
+  height: 24px !important;
+  font-size: 0.8rem !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 50% !important;
+  color: var(--text-muted) !important;
+}
+
+.msg-reactions-wrap {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  margin-top: 4px !important;
+  min-height: 28px !important;
+  flex-wrap: wrap !important;
+}
+
+/* Reactions stick below bubble */
+.msg-bubble-wrap {
+  flex-direction: column !important;
+}
+
+.msg-bubble-wrap.mine {
+  align-items: flex-end !important;
+}
+
+.msg-bubble-wrap.theirs {
+  align-items: flex-start !important;
+}
