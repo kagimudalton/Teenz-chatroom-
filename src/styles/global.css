@@ -1857,3 +1857,19 @@ img[referrerpolicy="no-referrer"] {
 .remote-video {
   -webkit-media-controls: auto !important;
 }
+
+/* ─── WALLPAPER DISPLAY FIX ─── */
+.messages-container {
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-attachment: local !important;
+}
+
+/* Ensure wallpaper only in messages area */
+.chat-sidebar,
+.msg-header,
+.msg-input-bar,
+.edit-bar {
+  background-image: none !important;
+}
