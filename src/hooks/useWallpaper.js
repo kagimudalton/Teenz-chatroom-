@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
-import { getUserWallpaper, PRESET_WALLPAPERS } from '../services/wallpaperService.js'
+import { doc, onSnapshot, updateDoc } from 'firebase/firestore'
+import { db } from '../services/firebase.js'
 import { useAuth } from '../features/auth/AuthContext.jsx'
+import { PRESET_WALLPAPERS } from '../services/wallpaperService.js'
 
 export const useWallpaper = () => {
   const { user } = useAuth()
@@ -9,13 +11,31 @@ export const useWallpaper = () => {
 
   useEffect(() => {
     if (!user) return
-    getUserWallpaper(user.uid).then((wp) => {
-      setWallpaper(wp)
+
+    // Use realtime listener so wallpaper updates instantly
+    const unsubscribe = onSnapshot(doc(db, 'users', user.uid), (snap) => {
+      if (snap.exists() && snap.data().wallpaper) {
+        setWallpaper(snap.data().wallpaper)
+      } else {
+        setWallpaper(PRESET_WALLPAPERS[0])
+      }
       setLoading(false)
     })
+
+    return () => unsubscribe()
   }, [user])
 
-  const updateWallpaper = (wp) => setWallpaper(wp)
+  const updateWallpaper = async (wp) => {
+    setWallpaper(wp)
+    // Also save to Firestore immediately
+    if (user) {
+      try {
+        await updateDoc(doc(db, 'users', user.uid), { wallpaper: wp })
+      } catch (err) {
+        console.warn('Failed to save wallpaper:', err)
+      }
+    }
+  }
 
   return { wallpaper, loading, updateWallpaper }
 }

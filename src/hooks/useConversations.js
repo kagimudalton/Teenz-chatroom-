@@ -11,7 +11,6 @@ export const useConversations = () => {
 
   useEffect(() => {
     if (!user) return
-
     setLoading(true)
 
     const q = query(
@@ -24,10 +23,12 @@ export const useConversations = () => {
       try {
         const convPromises = snapshot.docs.map(async (d) => {
           const conv = d.data()
+          
+          // Find the OTHER user (not current user)
           const otherUserId = conv.participants?.find((p) => p !== user.uid)
           if (!otherUserId) return null
 
-          // Cache user lookups to avoid repeated Firestore reads
+          // Cache to avoid repeated reads
           if (!userCache.current[otherUserId]) {
             try {
               const userSnap = await getDoc(doc(db, 'users', otherUserId))
@@ -46,24 +47,23 @@ export const useConversations = () => {
           }
         })
 
-        const results = await Promise.all(convPromises)
-        const filtered = results.filter(Boolean)
+        const results = (await Promise.all(convPromises)).filter(Boolean)
 
-        // Sort by lastMessageAt descending
-        filtered.sort((a, b) => {
-          const aTime = a.lastMessageAt?.toMillis?.() || 0
-          const bTime = b.lastMessageAt?.toMillis?.() || 0
+        // Sort by most recent message
+        results.sort((a, b) => {
+          const aTime = a.lastMessageAt?.toMillis?.() || a.createdAt?.toMillis?.() || 0
+          const bTime = b.lastMessageAt?.toMillis?.() || b.createdAt?.toMillis?.() || 0
           return bTime - aTime
         })
 
-        setConversations(filtered)
+        setConversations(results)
         setLoading(false)
       } catch (err) {
         console.warn('useConversations error:', err)
         setLoading(false)
       }
     }, (err) => {
-      console.warn('Conversations snapshot error:', err)
+      console.warn('Snapshot error:', err)
       setLoading(false)
     })
 
