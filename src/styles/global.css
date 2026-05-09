@@ -1873,3 +1873,47 @@ img[referrerpolicy="no-referrer"] {
 .edit-bar {
   background-image: none !important;
 }
+
+/* ─── GROUP CHAT ─── */
+.selected-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.selected-member-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-active);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-full);
+  padding: 4px 8px 4px 4px;
+  font-size: 0.82rem;
+}
+
+.selected-member-chip button {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  padding: 0 2px;
+}
+
+.selected-result {
+  background: var(--surface-active) !important;
+}
+
+.group-msg-sender {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  margin-bottom: 3px;
+}
+
+.group-avatar-ring {
+  padding: 2px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+  flex-shrink: 0;
+}
