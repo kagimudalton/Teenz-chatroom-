@@ -15,6 +15,7 @@ export const useCall = () => {
 
   const peerConnectionRef = useRef(null)
   const localStreamRef = useRef(null)
+  const remoteStreamRef = useRef(null)
   const callIdRef = useRef(null)
   const cleanupRef = useRef(null)
   const timerRef = useRef(null)
@@ -33,7 +34,6 @@ export const useCall = () => {
     return () => unsubscribe()
   }, [user, callState])
 
-  // Call duration timer
   useEffect(() => {
     if (callState === 'active') {
       timerRef.current = setInterval(() => setCallDuration(d => d + 1), 1000)
@@ -44,6 +44,15 @@ export const useCall = () => {
     return () => clearInterval(timerRef.current)
   }, [callState])
 
+  const attachStream = useCallback((ref, stream) => {
+    if (ref.current && stream) {
+      ref.current.srcObject = stream
+      ref.current.muted = ref === localVideoRef
+      ref.current.volume = ref === remoteVideoRef ? 1.0 : 0
+      ref.current.play().catch(e => console.warn('play error:', e))
+    }
+  }, [])
+
   const startCall = useCallback(async (partnerId, partnerUser, type = 'video') => {
     try {
       setError(null)
@@ -53,7 +62,10 @@ export const useCall = () => {
 
       const stream = await getLocalStream(type === 'video', true)
       localStreamRef.current = stream
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream
+
+      // Ensure all tracks enabled
+      stream.getTracks().forEach(t => { t.enabled = true })
+      attachStream(localVideoRef, stream)
 
       const { callId, peerConnection, cleanup } = await initiateCall(user.uid, partnerId, type)
       callIdRef.current = callId
@@ -63,14 +75,21 @@ export const useCall = () => {
       addStreamToPeerConnection(peerConnection, stream)
 
       peerConnection.ontrack = (event) => {
-        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0]
+        console.log('Got remote track:', event.track.kind)
+        const remoteStream = event.streams[0] || new MediaStream([event.track])
+        remoteStreamRef.current = remoteStream
+        attachStream(remoteVideoRef, remoteStream)
         setCallState('active')
       }
 
       peerConnection.onconnectionstatechange = () => {
-        if (peerConnection.connectionState === 'disconnected') hangUp()
+        console.log('Connection state:', peerConnection.connectionState)
+        if (['disconnected', 'failed', 'closed'].includes(peerConnection.connectionState)) {
+          hangUp()
+        }
       }
     } catch (err) {
+      console.error('startCall error:', err)
       setError(err.message)
       setCallState('idle')
     }
@@ -81,9 +100,11 @@ export const useCall = () => {
     try {
       setError(null)
       const { callId, type } = incomingCall
+
       const stream = await getLocalStream(type === 'video', true)
       localStreamRef.current = stream
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream
+      stream.getTracks().forEach(t => { t.enabled = true })
+      attachStream(localVideoRef, stream)
 
       const { peerConnection, callData, cleanup } = await answerCall(callId)
       callIdRef.current = callId
@@ -94,12 +115,24 @@ export const useCall = () => {
       addStreamToPeerConnection(peerConnection, stream)
 
       peerConnection.ontrack = (event) => {
-        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0]
+        console.log('Got remote track (receiver):', event.track.kind)
+        const remoteStream = event.streams[0] || new MediaStream([event.track])
+        remoteStreamRef.current = remoteStream
+        attachStream(remoteVideoRef, remoteStream)
+        setCallState('active')
+      }
+
+      peerConnection.onconnectionstatechange = () => {
+        console.log('Connection state (receiver):', peerConnection.connectionState)
+        if (['disconnected', 'failed', 'closed'].includes(peerConnection.connectionState)) {
+          hangUp()
+        }
       }
 
       setCallState('active')
       setIncomingCall(null)
     } catch (err) {
+      console.error('acceptCall error:', err)
       setError(err.message)
       setCallState('idle')
     }
@@ -114,7 +147,7 @@ export const useCall = () => {
   }, [incomingCall])
 
   const hangUp = useCallback(async () => {
-    if (localStreamRef.current) localStreamRef.current.getTracks().forEach(t => t.stop())
+    localStreamRef.current?.getTracks().forEach(t => t.stop())
     if (cleanupRef.current) cleanupRef.current()
     if (callIdRef.current) await endCall(callIdRef.current, peerConnectionRef.current)
     setCallState('ended')
