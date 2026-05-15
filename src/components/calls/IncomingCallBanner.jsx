@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { startRingtone, stopRingtone } from '../../services/ringtoneService.js'
 import UserAvatar from '../ui/UserAvatar.jsx'
 
 const IncomingCallBanner = ({ call, callerUser, onAccept, onReject }) => {
@@ -7,14 +8,34 @@ const IncomingCallBanner = ({ call, callerUser, onAccept, onReject }) => {
 
   useEffect(() => {
     setTimeout(() => setVisible(true), 50)
+    startRingtone()
+
     const timer = setInterval(() => {
       setTimeLeft(t => {
-        if (t <= 1) { onReject(); return 0 }
+        if (t <= 1) {
+          stopRingtone()
+          onReject()
+          return 0
+        }
         return t - 1
       })
     }, 1000)
-    return () => clearInterval(timer)
+
+    return () => {
+      clearInterval(timer)
+      stopRingtone()
+    }
   }, [])
+
+  const handleAccept = () => {
+    stopRingtone()
+    onAccept()
+  }
+
+  const handleReject = () => {
+    stopRingtone()
+    onReject()
+  }
 
   return (
     <div className={`incoming-call-banner ${visible ? 'visible' : ''}`}>
@@ -27,16 +48,14 @@ const IncomingCallBanner = ({ call, callerUser, onAccept, onReject }) => {
         </div>
         <div className="incoming-call-text">
           <div className="incoming-call-name">{callerUser?.username || 'Someone'}</div>
-          <div className="incoming-call-type">Incoming {call.type} call • {timeLeft}s</div>
+          <div className="incoming-call-type">
+            Incoming {call.type} call • {timeLeft}s
+          </div>
         </div>
       </div>
       <div className="incoming-call-actions">
-        <button className="reject-call-btn" onClick={onReject} title="Decline">
-          📵
-        </button>
-        <button className="accept-call-btn" onClick={onAccept} title="Accept">
-          📞
-        </button>
+        <button className="reject-call-btn" onClick={handleReject} title="Decline" />
+        <button className="accept-call-btn" onClick={handleAccept} title="Accept" />
       </div>
     </div>
   )
