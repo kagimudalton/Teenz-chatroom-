@@ -1972,3 +1972,58 @@ img[referrerpolicy="no-referrer"] {
   background: #000 !important;
   position: relative !important;
 }
+
+/* ─── CONTACTS SYNC ─── */
+.contacts-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+
+.contacts-tab {
+  flex: 1;
+  padding: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 2px solid transparent;
+  transition: all var(--transition);
+}
+
+.contacts-tab.active {
+  color: var(--accent-purple);
+  border-bottom-color: var(--accent-purple);
+}
+
+.sync-contacts-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 20px;
+  text-align: center;
+}
+
+.sync-icon { font-size: 3rem; }
+
+.sync-contacts-section p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  max-width: 260px;
+}
+
+.sync-note {
+  font-size: 0.75rem !important;
+  color: var(--text-muted) !important;
+}
+
+/* ─── CUSTOM WALLPAPER FIX ─── */
+.messages-container[style*="url"] {
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+}
+
+.messages-container[style*="linear-gradient"],
+.messages-container[style*="background"] {
+  background-attachment: local !important;
+}
