@@ -2027,3 +2027,44 @@ img[referrerpolicy="no-referrer"] {
 .messages-container[style*="background"] {
   background-attachment: local !important;
 }
+
+/* ─── AUDIO MESSAGE PLAYER ─── */
+.msg-audio-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 180px;
+  padding: 4px 0;
+}
+
+.audio-play-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background var(--transition);
+}
+
+.audio-play-btn:hover { background: rgba(255,255,255,0.3); }
+
+.audio-waveform {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  height: 28px;
+}
+
+.waveform-bar {
+  width: 3px;
+  min-height: 4px;
+  background: rgba(255,255,255,0.5);
+  border-radius: 2px;
+  flex-shrink: 0;
+}

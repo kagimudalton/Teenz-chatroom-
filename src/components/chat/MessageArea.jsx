@@ -8,6 +8,7 @@ import { formatTime, getStatusIcon } from '../../utils/helpers.js'
 import UserAvatar from '../ui/UserAvatar.jsx'
 import WallpaperPicker from './WallpaperPicker.jsx'
 import EmojiPicker from './EmojiPicker.jsx'
+import AudioRecorder from './AudioRecorder.jsx'
 import MessageReactions from './MessageReactions.jsx'
 import toast from 'react-hot-toast'
 
@@ -21,18 +22,40 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
   const [showWallpaper, setShowWallpaper] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [showEmoji, setShowEmoji] = useState(false)
+  const [showRecorder, setShowRecorder] = useState(false)
   const [userStatus, setUserStatus] = useState({ isOnline: false, lastSeen: null })
   const [editingMsg, setEditingMsg] = useState(null)
   const [editText, setEditText] = useState('')
   const imageInputRef = useRef(null)
   const videoInputRef = useRef(null)
   const textareaRef = useRef(null)
+  const messagesContainerRef = useRef(null)
 
   useEffect(() => {
     if (!otherUser?.uid) return
     const unsubscribe = subscribeToUserStatus(otherUser.uid, setUserStatus)
     return () => unsubscribe()
   }, [otherUser?.uid])
+
+  // Apply wallpaper directly to DOM
+  useEffect(() => {
+    const container = messagesContainerRef.current
+    if (!container || !wallpaper) return
+    if (wallpaper.id === 'default') {
+      container.style.background = ''
+      container.style.backgroundImage = ''
+      return
+    }
+    if (wallpaper.type === 'image') {
+      container.style.backgroundImage = `url(${wallpaper.value})`
+      container.style.backgroundSize = 'cover'
+      container.style.backgroundPosition = 'center'
+      container.style.backgroundRepeat = 'no-repeat'
+    } else {
+      container.style.background = wallpaper.value
+      container.style.backgroundImage = ''
+    }
+  }, [wallpaper])
 
   const handleSendText = async (e) => {
     e.preventDefault()
@@ -84,6 +107,19 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
     }
   }
 
+  const handleVoiceNote = async (audioBlob) => {
+    const file = new File([audioBlob], `voice_${Date.now()}.webm`, { type: 'audio/webm' })
+    setSending(true)
+    setShowRecorder(false)
+    try {
+      await sendMediaMessage(conversationId, user.uid, otherUser.uid, file, 'audio')
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSending(false)
+    }
+  }
+
   const handleEditMessage = async () => {
     if (!editingMsg || !editText.trim()) return
     try {
@@ -106,17 +142,6 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
     }
   }
 
-  const getWallpaperStyle = () => {
-    if (!wallpaper || wallpaper.id === 'default') return {}
-    if (wallpaper.type === 'image') return {
-      backgroundImage: `url(${wallpaper.value})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-    }
-    return { background: wallpaper.value }
-  }
-
-  const hasWallpaper = wallpaper && wallpaper.id !== 'default'
   const statusText = userStatus.isOnline ? 'Online' : formatLastSeen(userStatus.lastSeen)
   const groupedMessages = groupByDate(messages)
 
@@ -126,10 +151,11 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
         <WallpaperPicker
           currentWallpaper={wallpaper}
           onClose={() => setShowWallpaper(false)}
-          onWallpaperChange={(wp) => { updateWallpaper(wp); setShowWallpaper(false) }}
+          onWallpaperChange={(wp) => { updateWallpaper(wp) }}
         />
       )}
 
+      {/* Header */}
       <div className="msg-header">
         <button className="back-to-sidebar" onClick={onBackToSidebar} />
         <div className="msg-header-user">
@@ -146,7 +172,6 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
           <button className="call-btn video" onClick={() => onStartCall('video')} title="Video call" />
           <button className="call-btn" onClick={(e) => { e.stopPropagation(); setShowMenu(v => !v) }} title="More" />
         </div>
-
         {showMenu && (
           <div className="header-dropdown" onClick={e => e.stopPropagation()}>
             <button onClick={() => { setShowWallpaper(true); setShowMenu(false) }}>🎨 Wallpaper</button>
@@ -155,7 +180,8 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
         )}
       </div>
 
-      <div className={`messages-container ${hasWallpaper ? 'has-wallpaper' : ''}`} style={getWallpaperStyle()}>
+      {/* Messages */}
+      <div ref={messagesContainerRef} className="messages-container">
         {loading ? (
           <div className="messages-loading">Loading…</div>
         ) : messages.length === 0 ? (
@@ -190,16 +216,27 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
                     <video src={msg.mediaURL} controls className="msg-video" preload="metadata" />
                   )}
                   {msg.type === 'audio' && (
-                    <div className="msg-audio">
-                      <span>🎤</span>
-                      <audio src={msg.mediaURL} controls />
+                    <div className="msg-audio-player">
+                      <button
+                        className="audio-play-btn"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          const audio = e.currentTarget.nextSibling
+                          if (audio.paused) audio.play()
+                          else audio.pause()
+                        }}
+                      >▶</button>
+                      <audio src={msg.mediaURL} style={{ display: 'none' }} />
+                      <div className="audio-waveform">
+                        {[...Array(20)].map((_, i) => (
+                          <div key={i} className="waveform-bar" style={{ height: `${Math.random() * 100}%` }} />
+                        ))}
+                      </div>
                     </div>
                   )}
                   {msg.type === 'call' && (
                     <div className="msg-call">
-                      <span className="msg-call-icon">
-                        {msg.callStatus === 'missed' ? '📵' : msg.callType === 'video' ? '📹' : '📞'}
-                      </span>
+                      <span className="msg-call-icon">{msg.callStatus === 'missed' ? '📵' : msg.callType === 'video' ? '📹' : '📞'}</span>
                       <span className="msg-call-text">{msg.text}</span>
                     </div>
                   )}
@@ -210,10 +247,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
                     )}
                   </div>
                 </div>
-                <MessageReactions
-                  message={msg}
-                  conversationId={conversationId}
-                />
+                <MessageReactions message={msg} conversationId={conversationId} />
               </div>
             ))}
           </div>
@@ -221,6 +255,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
         <div ref={bottomRef} />
       </div>
 
+      {/* Edit bar */}
       {editingMsg && (
         <div className="edit-bar">
           <span>✏️ Editing message</span>
@@ -232,6 +267,15 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
         </div>
       )}
 
+      {/* Audio recorder */}
+      {showRecorder && (
+        <AudioRecorder
+          onSend={handleVoiceNote}
+          onCancel={() => setShowRecorder(false)}
+        />
+      )}
+
+      {/* Input bar */}
       <form className="msg-input-bar" onSubmit={handleSendText}>
         <div className="media-menu-wrap">
           <button type="button" className="media-menu-btn" onClick={(e) => { e.stopPropagation(); setShowMediaMenu(v => !v); setShowEmoji(false) }} />
@@ -239,17 +283,16 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
             <div className="media-menu" onClick={e => e.stopPropagation()}>
               <button type="button" onClick={() => { imageInputRef.current?.click(); setShowMediaMenu(false) }}>🖼️ Image</button>
               <button type="button" onClick={() => { videoInputRef.current?.click(); setShowMediaMenu(false) }}>🎬 Video</button>
+              <button type="button" onClick={() => { setShowRecorder(true); setShowMediaMenu(false) }}>🎤 Voice note</button>
             </div>
           )}
         </div>
         <input type="file" ref={imageInputRef} accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files[0] && handleMediaUpload(e.target.files[0], 'image')} />
         <input type="file" ref={videoInputRef} accept="video/*" style={{ display: 'none' }} onChange={e => e.target.files[0] && handleMediaUpload(e.target.files[0], 'video')} />
-
-        <div className="emoji-btn-wrap" style={{ position: 'relative', flexShrink: 0 }}>
+        <div style={{ position: 'relative', flexShrink: 0 }}>
           <button type="button" className="emoji-trigger-btn" onClick={(e) => { e.stopPropagation(); setShowEmoji(v => !v); setShowMediaMenu(false) }}>😊</button>
           {showEmoji && <EmojiPicker onSelect={handleEmojiSelect} onClose={() => setShowEmoji(false)} />}
         </div>
-
         <textarea
           ref={textareaRef}
           className="msg-input"
