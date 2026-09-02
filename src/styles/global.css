@@ -2109,3 +2109,105 @@ img[referrerpolicy="no-referrer"] {
   border-radius: 2px;
   flex-shrink: 0;
 }
+
+/* ─── TYPING INDICATOR ─── */
+.msg-header-status.typing {
+  color: var(--accent-cyan) !important;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+/* ─── REPLY BAR ─── */
+.reply-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: rgba(108,77,255,0.1);
+  border-top: 1px solid var(--accent-purple);
+  border-left: 3px solid var(--accent-purple);
+  flex-shrink: 0;
+}
+
+.reply-bar-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.reply-bar-label {
+  font-size: 0.72rem;
+  color: var(--accent-purple);
+  font-weight: 600;
+}
+
+.reply-bar-text {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 240px;
+}
+
+.reply-bar-close {
+  color: var(--text-muted);
+  font-size: 1rem;
+  padding: 4px 8px;
+  flex-shrink: 0;
+}
+
+/* ─── REPLY PREVIEW IN BUBBLE ─── */
+.reply-preview {
+  background: rgba(255,255,255,0.08);
+  border-left: 3px solid var(--accent-cyan);
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-bottom: 4px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── FORWARDED LABEL ─── */
+.forwarded-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-bottom: 2px;
+  padding: 0 4px;
+}
+
+/* ─── MESSAGE CONTEXT MENU ─── */
+.msg-context-menu {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(20,16,50,0.98);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-float);
+  z-index: 200;
+  min-width: 200px;
+  animation: slideUp 0.2s ease;
+}
+
+.msg-context-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  width: 100%;
+  font-size: 0.92rem;
+  text-align: left;
+  transition: background var(--transition);
+  border-bottom: 1px solid var(--border);
+}
+
+.msg-context-menu button:last-child { border-bottom: none; }
+.msg-context-menu button:hover { background: var(--surface-hover); }

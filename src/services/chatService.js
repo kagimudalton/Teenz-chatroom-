@@ -120,3 +120,31 @@ export const addReaction = async (conversationId, messageId, userId, emoji) => {
   Object.keys(updated).forEach(k => { if (updated[k].length === 0) delete updated[k] })
   await updateDoc(msgRef, { reactions: updated })
 }
+
+export const forwardMessage = async (conversationId, senderId, receiverId, originalMsg) => {
+  const text = originalMsg.type === 'text' ? originalMsg.text : null
+  const mediaURL = originalMsg.mediaURL || null
+  return sendMessage(conversationId, {
+    senderId,
+    receiverId,
+    type: originalMsg.type,
+    text,
+    mediaURL,
+    forwarded: true,
+  })
+}
+
+export const setTypingStatus = async (conversationId, userId, isTyping) => {
+  const convRef = doc(db, 'conversations', conversationId)
+  await updateDoc(convRef, {
+    [`typing.${userId}`]: isTyping,
+  })
+}
+
+export const subscribeToTyping = (conversationId, callback) => {
+  return onSnapshot(doc(db, 'conversations', conversationId), (snap) => {
+    if (snap.exists()) {
+      callback(snap.data().typing || {})
+    }
+  })
+}
