@@ -9,6 +9,7 @@ import UserAvatar from '../ui/UserAvatar.jsx'
 import WallpaperPicker from './WallpaperPicker.jsx'
 import EmojiPicker from './EmojiPicker.jsx'
 import AudioRecorder from './AudioRecorder.jsx'
+import VoiceMessagePlayer from './VoiceMessagePlayer.jsx'
 import MessageReactions from './MessageReactions.jsx'
 import ForwardModal from './ForwardModal.jsx'
 import toast from 'react-hot-toast'
@@ -123,8 +124,10 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
   const handleMediaUpload = async (file, type) => {
     setSending(true)
     setShowMediaMenu(false)
+    const activeReply = replyingTo
+    setReplyingTo(null)
     try {
-      await sendMediaMessage(conversationId, user.uid, otherUser.uid, file, type)
+      await sendMediaMessage(conversationId, user.uid, otherUser.uid, file, type, null, activeReply)
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -136,8 +139,10 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
     const file = new File([audioBlob], `voice_${Date.now()}.webm`, { type: 'audio/webm' })
     setSending(true)
     setShowRecorder(false)
+    const activeReply = replyingTo
+    setReplyingTo(null)
     try {
-      await sendMediaMessage(conversationId, user.uid, otherUser.uid, file, 'audio')
+      await sendMediaMessage(conversationId, user.uid, otherUser.uid, file, 'audio', null, activeReply)
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -264,20 +269,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
                     <video src={msg.mediaURL} controls className="msg-video" preload="metadata" />
                   )}
                   {msg.type === 'audio' && (
-                    <div className="msg-audio-player">
-                      <button className="audio-play-btn" onClick={(e) => {
-                        e.stopPropagation()
-                        const audio = e.currentTarget.nextSibling
-                        if (audio.paused) audio.play()
-                        else audio.pause()
-                      }}>▶</button>
-                      <audio src={msg.mediaURL} style={{ display: 'none' }} />
-                      <div className="audio-waveform">
-                        {[...Array(20)].map((_, i) => (
-                          <div key={i} className="waveform-bar" style={{ height: `${20 + Math.sin(i) * 50 + Math.random() * 30}%` }} />
-                        ))}
-                      </div>
-                    </div>
+                    <VoiceMessagePlayer mediaURL={msg.mediaURL} />
                   )}
                   {msg.type === 'call' && (
                     <div className="msg-call">

@@ -14,22 +14,32 @@ export const getOrCreateConversation = async (uid1, uid2) => {
   return conversationId
 }
 
-export const sendTextMessage = async (conversationId, senderId, receiverId, text) => {
+export const sendTextMessage = async (conversationId, senderId, receiverId, text, replyingTo = null) => {
   if (!text.trim()) throw new Error('Message cannot be empty.')
   if (text.length > 2000) throw new Error('Message too long.')
-  return sendMessage(conversationId, { senderId, receiverId, type: 'text', text: text.trim(), mediaURL: null })
+  return sendMessage(conversationId, { senderId, receiverId, type: 'text', text: text.trim(), mediaURL: null, replyTo: buildReplyTo(replyingTo) })
 }
 
-export const sendMediaMessage = async (conversationId, senderId, receiverId, file, type, onProgress) => {
+export const sendMediaMessage = async (conversationId, senderId, receiverId, file, type, onProgress, replyingTo = null) => {
   const mediaURL = await uploadToCloudinary(file, type, onProgress)
-  return sendMessage(conversationId, { senderId, receiverId, type, text: null, mediaURL })
+  return sendMessage(conversationId, { senderId, receiverId, type, text: null, mediaURL, replyTo: buildReplyTo(replyingTo) })
+}
+
+const buildReplyTo = (originalMsg) => {
+  if (!originalMsg) return null
+  return {
+    messageId: originalMsg.messageId || originalMsg.id || null,
+    senderId: originalMsg.senderId || null,
+    type: originalMsg.type || 'text',
+    text: originalMsg.type === 'text' ? (originalMsg.text || '') : null,
+  }
 }
 
 const sendMessage = async (conversationId, messageData) => {
   const batch = writeBatch(db)
   const messagesRef = collection(db, 'conversations', conversationId, 'messages')
   const msgRef = doc(messagesRef)
-  const message = { messageId: msgRef.id, conversationId, senderId: messageData.senderId, receiverId: messageData.receiverId, type: messageData.type, text: messageData.text, mediaURL: messageData.mediaURL, status: 'sent', createdAt: serverTimestamp(), deletedFor: [] }
+  const message = { messageId: msgRef.id, conversationId, senderId: messageData.senderId, receiverId: messageData.receiverId, type: messageData.type, text: messageData.text, mediaURL: messageData.mediaURL, replyTo: messageData.replyTo || null, status: 'sent', createdAt: serverTimestamp(), deletedFor: [] }
   batch.set(msgRef, message)
   const convRef = doc(db, 'conversations', conversationId)
   batch.update(convRef, { lastMessage: { text: messageData.type === 'text' ? messageData.text : `📎 ${messageData.type}`, type: messageData.type, senderId: messageData.senderId }, lastMessageAt: serverTimestamp() })
