@@ -2313,3 +2313,82 @@ img[referrerpolicy="no-referrer"] {
 
 .msg-context-menu button:last-child { border-bottom: none; }
 .msg-context-menu button:hover { background: var(--surface-hover); }
+
+/* --- VOICE NOTE RECORDER --- */
+.audio-recorder-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.recorder-cancel-btn,
+.recorder-send-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1rem;
+  color: #fff;
+  transition: background var(--transition), transform var(--transition);
+}
+
+.recorder-cancel-btn {
+  background: rgba(255,255,255,0.08);
+}
+.recorder-cancel-btn:hover {
+  background: rgba(255,80,80,0.25);
+}
+
+.recorder-send-btn {
+  background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+}
+.recorder-send-btn:hover {
+  transform: scale(1.05);
+}
+
+.recorder-live-waveform {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  height: 32px;
+}
+
+.recorder-bar {
+  width: 3px;
+  min-height: 6px;
+  background: linear-gradient(180deg, var(--accent-cyan), var(--accent-purple));
+  border-radius: 2px;
+  flex-shrink: 0;
+  transition: height 80ms ease;
+}
+
+.recorder-timer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  min-width: 54px;
+}
+
+.recorder-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff4d4f;
+  animation: recorder-pulse 1s infinite;
+}
+
+@keyframes recorder-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
