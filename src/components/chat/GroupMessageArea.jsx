@@ -3,10 +3,12 @@ import { useAuth } from '../../features/auth/AuthContext.jsx'
 import { subscribeToGroupMessages, sendGroupMessage, sendGroupMediaMessage, leaveGroup } from '../../services/groupService.js'
 import { formatTime } from '../../utils/helpers.js'
 import UserAvatar from '../ui/UserAvatar.jsx'
+import FullscreenViewer from '../ui/FullscreenViewer.jsx'
 import EmojiPicker from './EmojiPicker.jsx'
+import FormattedText from './FormattedText.jsx'
 import toast from 'react-hot-toast'
 
-const GroupMessageArea = ({ group, onBackToSidebar }) => {
+const GroupMessageArea = ({ group, onBackToSidebar, onExitChat }) => {
   const { user, userProfile } = useAuth()
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
@@ -14,6 +16,7 @@ const GroupMessageArea = ({ group, onBackToSidebar }) => {
   const [sending, setSending] = useState(false)
   const [showEmoji, setShowEmoji] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [fullscreenMedia, setFullscreenMedia] = useState(null)
   const bottomRef = useRef(null)
   const imageInputRef = useRef(null)
   const videoInputRef = useRef(null)
@@ -81,6 +84,9 @@ const GroupMessageArea = ({ group, onBackToSidebar }) => {
 
   return (
     <div className="message-area" onClick={() => { setShowEmoji(false); setShowMenu(false) }}>
+      {fullscreenMedia && (
+        <FullscreenViewer mediaURL={fullscreenMedia.url} mediaType={fullscreenMedia.type} onClose={() => setFullscreenMedia(null)} />
+      )}
       {/* Header */}
       <div className="msg-header">
         <button className="back-to-sidebar" onClick={onBackToSidebar} />
@@ -98,6 +104,9 @@ const GroupMessageArea = ({ group, onBackToSidebar }) => {
         </div>
         <div className="msg-header-actions">
           <button className="call-btn" onClick={(e) => { e.stopPropagation(); setShowMenu(v => !v) }} title="More" />
+          {onExitChat && (
+            <button className="exit-chat-btn" onClick={(e) => { e.stopPropagation(); onExitChat() }} title="Close chat">✕</button>
+          )}
         </div>
         {showMenu && (
           <div className="header-dropdown" onClick={e => e.stopPropagation()}>
@@ -119,8 +128,8 @@ const GroupMessageArea = ({ group, onBackToSidebar }) => {
                   <div key={msg.id} className={`msg-bubble-wrap ${isMine ? 'mine' : 'theirs'}`}>
                     <div className={`msg-bubble ${isMine ? 'mine' : 'theirs'} ${msg.type}`}>
                       {!isMine && <div className="group-msg-sender">{msg.senderName}</div>}
-                      {msg.type === 'text' && <p className="msg-text">{msg.text}</p>}
-                      {msg.type === 'image' && <img src={msg.mediaURL} className="msg-image" loading="lazy" onClick={() => window.open(msg.mediaURL, '_blank')} />}
+                      {msg.type === 'text' && <p className="msg-text"><FormattedText text={msg.text} /></p>}
+                      {msg.type === 'image' && <img src={msg.mediaURL} className="msg-image" loading="lazy" onClick={(e) => { e.stopPropagation(); setFullscreenMedia({ url: msg.mediaURL, type: 'image' }) }} />}
                       {msg.type === 'video' && <video src={msg.mediaURL} controls className="msg-video" preload="metadata" />}
                       {msg.type === 'audio' && <div className="msg-audio"><span>🎤</span><audio src={msg.mediaURL} controls /></div>}
                       <div className="msg-meta">

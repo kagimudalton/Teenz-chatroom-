@@ -216,10 +216,40 @@ input,textarea{font-family:inherit;color:inherit}
 @media(max-width:768px){
   .chat-sidebar{position:fixed;top:0;left:0;bottom:0;width:100%;transform:translateX(0);z-index:20}
   .chat-sidebar.closed{transform:translateX(-100%)}
-  .back-to-sidebar{display:flex}
+  .back-to-sidebar{
+    display:flex;
+    width:38px;
+    height:38px;
+    border-radius:50%;
+    background:linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+    font-size:0;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='15 18 9 12 15 6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-position:center;
+    background-size:20px, auto;
+  }
+  .exit-chat-btn{display:none !important}
   .auth-card{padding:28px 20px}
   .msg-bubble{max-width:88%}
 }
+
+.exit-chat-btn{
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  background:rgba(255,255,255,0.08);
+  color:var(--text-primary);
+  font-size:1rem;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+  transition:background var(--transition);
+}
+.exit-chat-btn:hover{background:rgba(255,80,80,0.25)}
 
 /* ─── WALLPAPER PICKER ─── */
 .wallpaper-picker { max-width: 500px; }
@@ -343,20 +373,6 @@ input,textarea{font-family:inherit;color:inherit}
   object-fit: cover;
   border-radius: 50%;
   display: block;
-}
-
-/* Bigger clearer nav arrows */
-.back-to-sidebar {
-  font-size: 1.8rem !important;
-  font-weight: 900 !important;
-  color: var(--text-primary) !important;
-  width: 40px;
-  height: 40px;
-  display: flex !important;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.1);
 }
 
 /* Last seen indicator */
@@ -925,23 +941,6 @@ input,textarea{font-family:inherit;color:inherit}
   transform: scale(1.1);
 }
 
-/* ─── MODERN NAV ARROW ─── */
-.back-to-sidebar {
-  width: 38px !important;
-  height: 38px !important;
-  border-radius: 50% !important;
-  background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan)) !important;
-  color: #fff !important;
-  font-size: 1.3rem !important;
-  font-weight: 900 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  box-shadow: 0 0 12px var(--accent-purple-glow) !important;
-  border: none !important;
-  flex-shrink: 0;
-}
-
 /* ─── WHATSAPP STYLE CALL BUTTONS ─── */
 .msg-header-actions {
   display: flex;
@@ -1151,16 +1150,6 @@ img[referrerpolicy="no-referrer"] {
   background-repeat: no-repeat !important;
   background-position: center !important;
   background-size: 20px !important;
-}
-
-/* Back arrow - clean chevron */
-.back-to-sidebar {
-  font-size: 0 !important;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='15 18 9 12 15 6'/%3E%3C/svg%3E") !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-  background-size: 20px !important;
-  background-color: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan)) !important;
 }
 
 /* Logout button */
@@ -2122,6 +2111,58 @@ img[referrerpolicy="no-referrer"] {
   flex-shrink: 0;
   min-width: 32px;
   text-align: right;
+}
+
+/* ─── FULLSCREEN MEDIA VIEWER ─── */
+.msg-mono {
+  font-family: 'Courier New', monospace;
+  background: rgba(255,255,255,0.12);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.92em;
+}
+
+.fullscreen-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgba(0,0,0,0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fullscreen-fade-in 150ms ease;
+}
+
+@keyframes fullscreen-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fullscreen-media {
+  max-width: 95vw;
+  max-height: 95vh;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.fullscreen-close-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  transition: background var(--transition);
+}
+.fullscreen-close-btn:hover {
+  background: rgba(255,255,255,0.25);
 }
 
 /* ─── VOICE NOTE RECORDER ─── */

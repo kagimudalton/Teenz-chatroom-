@@ -6,15 +6,17 @@ import { sendTextMessage, sendMediaMessage, editMessage, setTypingStatus, subscr
 import { subscribeToUserStatus, formatLastSeen, reportUser } from '../../services/userService.js'
 import { formatTime, getStatusIcon } from '../../utils/helpers.js'
 import UserAvatar from '../ui/UserAvatar.jsx'
+import FullscreenViewer from '../ui/FullscreenViewer.jsx'
 import WallpaperPicker from './WallpaperPicker.jsx'
 import EmojiPicker from './EmojiPicker.jsx'
 import AudioRecorder from './AudioRecorder.jsx'
 import VoiceMessagePlayer from './VoiceMessagePlayer.jsx'
+import FormattedText from './FormattedText.jsx'
 import MessageReactions from './MessageReactions.jsx'
 import ForwardModal from './ForwardModal.jsx'
 import toast from 'react-hot-toast'
 
-const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }) => {
+const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, onExitChat }) => {
   const { user } = useAuth()
   const { messages, loading, bottomRef } = useMessages(conversationId)
   const { wallpaper, updateWallpaper } = useWallpaper()
@@ -30,6 +32,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
   const [editText, setEditText] = useState('')
   const [replyingTo, setReplyingTo] = useState(null)
   const [forwardMsg, setForwardMsg] = useState(null)
+  const [fullscreenMedia, setFullscreenMedia] = useState(null)
   const [contextMenu, setContextMenu] = useState(null)
   const [otherTyping, setOtherTyping] = useState(false)
   const imageInputRef = useRef(null)
@@ -184,6 +187,10 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
 
   return (
     <div className="message-area" onClick={() => { setShowMediaMenu(false); setShowMenu(false); setShowEmoji(false); setContextMenu(null) }}>
+      {fullscreenMedia && (
+        <FullscreenViewer mediaURL={fullscreenMedia.url} mediaType={fullscreenMedia.type} onClose={() => setFullscreenMedia(null)} />
+      )}
+
       {showWallpaper && (
         <WallpaperPicker currentWallpaper={wallpaper} onClose={() => setShowWallpaper(false)} onWallpaperChange={(wp) => { updateWallpaper(wp) }} />
       )}
@@ -220,6 +227,9 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
           <button className="call-btn audio" onClick={() => onStartCall('audio')} title="Voice call" />
           <button className="call-btn video" onClick={() => onStartCall('video')} title="Video call" />
           <button className="call-btn" onClick={(e) => { e.stopPropagation(); setShowMenu(v => !v) }} title="More" />
+          {onExitChat && (
+            <button className="exit-chat-btn" onClick={(e) => { e.stopPropagation(); onExitChat() }} title="Close chat">✕</button>
+          )}
         </div>
         {showMenu && (
           <div className="header-dropdown" onClick={e => e.stopPropagation()}>
@@ -258,12 +268,12 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall }
                 <div className={`msg-bubble ${msg.senderId === user.uid ? 'mine' : 'theirs'} ${msg.type}`}>
                   {msg.type === 'text' && (
                     <p className="msg-text">
-                      {msg.text}
+                      <FormattedText text={msg.text} />
                       {msg.edited && <span className="msg-edited"> (edited)</span>}
                     </p>
                   )}
                   {msg.type === 'image' && (
-                    <img src={msg.mediaURL} alt="Shared" className="msg-image" loading="lazy" onClick={() => window.open(msg.mediaURL, '_blank')} />
+                    <img src={msg.mediaURL} alt="Shared" className="msg-image" loading="lazy" onClick={(e) => { e.stopPropagation(); setFullscreenMedia({ url: msg.mediaURL, type: 'image' }) }} />
                   )}
                   {msg.type === 'video' && (
                     <video src={msg.mediaURL} controls className="msg-video" preload="metadata" />

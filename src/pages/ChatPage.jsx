@@ -179,11 +179,13 @@ const ChatPage = () => {
               otherUser={activeChat.data.otherUser}
               onStartCall={handleStartCall}
               onBackToSidebar={() => setSidebarOpen(true)}
+              onExitChat={() => setActiveChat(null)}
             />
           ) : (
             <GroupMessageArea
               group={activeChat.data}
               onBackToSidebar={() => setSidebarOpen(true)}
+              onExitChat={() => setActiveChat(null)}
             />
           )
         ) : (
