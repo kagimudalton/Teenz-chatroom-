@@ -2258,6 +2258,32 @@ img[referrerpolicy="no-referrer"] {
   background: rgba(255,255,255,0.25);
 }
 
+/* ─── FORMATTING TOOLBAR ─── */
+.formatting-toolbar {
+  display: flex;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--surface);
+  border-top: 1px solid rgba(255,255,255,0.08);
+  animation: slideUp 0.15s ease;
+}
+
+.formatting-toolbar-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.08);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition);
+}
+.formatting-toolbar-btn:hover {
+  background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+}
+
 /* ─── STICKER PICKER & ANIMATED STICKERS ─── */
 .sticker-picker {
   position: absolute;

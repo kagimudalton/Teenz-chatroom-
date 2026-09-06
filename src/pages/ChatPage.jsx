@@ -19,6 +19,7 @@ import ProfilePage from './ProfilePage.jsx'
 import { loadUserTheme } from '../services/themeService.js'
 import { formatTimestamp, truncate } from '../utils/helpers.js'
 import { requestNotificationPermission, showMessageNotification } from '../services/notificationService.js'
+import { markMessagesAsDelivered } from '../services/chatService.js'
 import { getActiveHoliday, isHolidayThemeEnabled, setHolidayThemeEnabled } from '../services/holidayService.js'
 import HolidayOverlay from '../components/ui/HolidayOverlay.jsx'
 
@@ -49,6 +50,15 @@ const ChatPage = () => {
   const prevConvosRef = useRef(new Map())
   const activeChatRef = useRef(activeChat)
   useEffect(() => { activeChatRef.current = activeChat }, [activeChat])
+
+  useEffect(() => {
+    if (!user) return
+    conversations.forEach((conv) => {
+      if (conv.lastMessage && conv.lastMessage.senderId !== user.uid) {
+        markMessagesAsDelivered(conv.id, user.uid)
+      }
+    })
+  }, [conversations, user])
 
   useEffect(() => {
     const prevMap = prevConvosRef.current

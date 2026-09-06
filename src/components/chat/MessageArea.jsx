@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useMessages } from '../../hooks/useMessages.js'
 import { useAuth } from '../../features/auth/AuthContext.jsx'
 import { useWallpaper } from '../../hooks/useWallpaper.js'
-import { sendTextMessage, sendMediaMessage, sendStickerMessage, editMessage, setTypingStatus, subscribeToTyping } from '../../services/chatService.js'
+import { sendTextMessage, sendMediaMessage, sendStickerMessage, editMessage, EDIT_WINDOW_MS, setTypingStatus, subscribeToTyping } from '../../services/chatService.js'
 import { subscribeToUserStatus, formatLastSeen, reportUser } from '../../services/userService.js'
 import { formatTime, getStatusIcon, isEmojiOnly } from '../../utils/helpers.js'
 import UserAvatar from '../ui/UserAvatar.jsx'
@@ -10,6 +10,7 @@ import FullscreenViewer from '../ui/FullscreenViewer.jsx'
 import WallpaperPicker from './WallpaperPicker.jsx'
 import EmojiPicker from './EmojiPicker.jsx'
 import StickerPicker, { getStickerById } from './StickerPicker.jsx'
+import FormattingToolbar from './FormattingToolbar.jsx'
 import AudioRecorder from './AudioRecorder.jsx'
 import VoiceMessagePlayer from './VoiceMessagePlayer.jsx'
 import FormattedText from './FormattedText.jsx'
@@ -28,6 +29,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
   const [showMenu, setShowMenu] = useState(false)
   const [showEmoji, setShowEmoji] = useState(false)
   const [showStickers, setShowStickers] = useState(false)
+  const [textSelection, setTextSelection] = useState({ start: 0, end: 0 })
   const [showRecorder, setShowRecorder] = useState(false)
   const [userStatus, setUserStatus] = useState({ isOnline: false, lastSeen: null })
   const [editingMsg, setEditingMsg] = useState(null)
@@ -86,6 +88,30 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
     }, 2000)
   }
 
+  const handleTextSelect = (e) => {
+    setTextSelection({ start: e.target.selectionStart, end: e.target.selectionEnd })
+  }
+
+  const handleFormat = (marker) => {
+    const { start, end } = textSelection
+    if (start === end) return
+    const before = text.slice(0, start)
+    const selected = text.slice(start, end)
+    const after = text.slice(end)
+    const newText = `${before}${marker}${selected}${marker}${after}`
+    setText(newText)
+    const newCursorPos = end + marker.length * 2
+    setTextSelection({ start: 0, end: 0 })
+    setTimeout(() => {
+      const textarea = textareaRef.current
+      if (textarea) {
+        textarea.selectionStart = newCursorPos
+        textarea.selectionEnd = newCursorPos
+        textarea.focus()
+      }
+    }, 0)
+  }
+
   const handleSendText = async (e) => {
     e.preventDefault()
     if (!text.trim() || sending) return
@@ -93,6 +119,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
     const msgText = text
     setText('')
     setReplyingTo(null)
+    setTextSelection({ start: 0, end: 0 })
     setTypingStatus(conversationId, user.uid, false).catch(() => {})
     try {
       await sendTextMessage(conversationId, user.uid, otherUser.uid, msgText, replyingTo)
@@ -167,13 +194,22 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
   const handleEditMessage = async () => {
     if (!editingMsg || !editText.trim()) return
     try {
-      await editMessage(conversationId, editingMsg.messageId || editingMsg.id, editText)
+      await editMessage(conversationId, editingMsg.messageId || editingMsg.id, editText, editingMsg.createdAt)
       toast.success('Message edited!')
       setEditingMsg(null)
       setEditText('')
     } catch (err) {
-      toast.error('Failed to edit message')
+      toast.error(err.message || 'Failed to edit message')
+      setEditingMsg(null)
+      setEditText('')
     }
+  }
+
+  const canEditMessage = (msg) => {
+    if (msg.senderId !== user.uid || msg.type !== 'text') return false
+    const sentTime = msg.createdAt?.toDate ? msg.createdAt.toDate().getTime() : 0
+    if (!sentTime) return true // optimistic: allow if timestamp not yet resolved locally
+    return Date.now() - sentTime <= EDIT_WINDOW_MS
   }
 
   const handleReport = async () => {
@@ -214,7 +250,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
       {contextMenu && (
         <div className="msg-context-menu" onClick={e => e.stopPropagation()}>
           <button onClick={() => { setReplyingTo(contextMenu); setContextMenu(null) }}>↩️ Reply</button>
-          {contextMenu.senderId === user.uid && contextMenu.type === 'text' && (
+          {canEditMessage(contextMenu) && (
             <button onClick={() => { setEditingMsg(contextMenu); setEditText(contextMenu.text); setContextMenu(null) }}>✏️ Edit</button>
           )}
           <button onClick={() => { setForwardMsg(contextMenu); setContextMenu(null) }}>↗️ Forward</button>
@@ -349,6 +385,10 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
       )}
 
       {/* Input bar */}
+      {textSelection.end > textSelection.start && (
+        <FormattingToolbar onFormat={handleFormat} />
+      )}
+
       <form className="msg-input-bar" onSubmit={handleSendText}>
         <div className="media-menu-wrap">
           <button type="button" className="media-menu-btn" onClick={(e) => { e.stopPropagation(); setShowMediaMenu(v => !v); setShowEmoji(false) }} />
@@ -370,7 +410,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
           <button type="button" className="emoji-trigger-btn" onClick={(e) => { e.stopPropagation(); setShowStickers(v => !v); setShowMediaMenu(false); setShowEmoji(false) }}>🎨</button>
           {showStickers && <StickerPicker onSelect={handleStickerSelect} onClose={() => setShowStickers(false)} />}
         </div>
-        <textarea ref={textareaRef} className="msg-input" value={text} onChange={handleTyping} onKeyDown={handleKeyDown} placeholder={`Message ${otherUser.username}…`} rows={1} maxLength={2000} />
+        <textarea ref={textareaRef} className="msg-input" value={text} onChange={handleTyping} onKeyDown={handleKeyDown} onSelect={handleTextSelect} placeholder={`Message ${otherUser.username}…`} rows={1} maxLength={2000} />
         <button type="submit" className={`send-btn ${text.trim() ? 'active' : ''}`} disabled={!text.trim() || sending} />
       </form>
     </div>

@@ -52,6 +52,19 @@ const sendMessage = async (conversationId, messageData) => {
   return message
 }
 
+export const markMessagesAsDelivered = async (conversationId, currentUserId) => {
+  try {
+    const q = query(collection(db, 'conversations', conversationId, 'messages'), where('receiverId', '==', currentUserId), where('status', '==', 'sent'))
+    const snap = await getDocs(q)
+    if (snap.empty) return
+    const batch = writeBatch(db)
+    snap.docs.forEach((d) => batch.update(d.ref, { status: 'delivered' }))
+    await batch.commit()
+  } catch (err) {
+    console.warn('markMessagesAsDelivered failed:', err)
+  }
+}
+
 export const markMessagesAsRead = async (conversationId, currentUserId) => {
   try {
     const q = query(collection(db, 'conversations', conversationId, 'messages'), where('receiverId', '==', currentUserId), where('status', '!=', 'read'))
@@ -114,7 +127,15 @@ export const deleteMessageForUser = async (conversationId, messageId, userId) =>
   await updateDoc(doc(db, 'conversations', conversationId, 'messages', messageId), { deletedFor: arrayUnion(userId) })
 }
 
-export const editMessage = async (conversationId, messageId, newText) => {
+export const EDIT_WINDOW_MS = 15 * 60 * 1000
+
+export const editMessage = async (conversationId, messageId, newText, createdAt = null) => {
+  if (createdAt) {
+    const sentTime = createdAt?.toDate ? createdAt.toDate().getTime() : new Date(createdAt).getTime()
+    if (Date.now() - sentTime > EDIT_WINDOW_MS) {
+      throw new Error('This message is too old to edit (15 minute limit).')
+    }
+  }
   const msgRef = doc(db, 'conversations', conversationId, 'messages', messageId)
   await updateDoc(msgRef, { text: newText, edited: true, editedAt: serverTimestamp() })
 }

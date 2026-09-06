@@ -6,6 +6,7 @@ import UserAvatar from '../ui/UserAvatar.jsx'
 import FullscreenViewer from '../ui/FullscreenViewer.jsx'
 import EmojiPicker from './EmojiPicker.jsx'
 import StickerPicker, { getStickerById } from './StickerPicker.jsx'
+import FormattingToolbar from './FormattingToolbar.jsx'
 import FormattedText from './FormattedText.jsx'
 import AudioRecorder from './AudioRecorder.jsx'
 import VoiceMessagePlayer from './VoiceMessagePlayer.jsx'
@@ -16,6 +17,7 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat }) => {
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [text, setText] = useState('')
+  const [textSelection, setTextSelection] = useState({ start: 0, end: 0 })
   const [sending, setSending] = useState(false)
   const [showEmoji, setShowEmoji] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
@@ -44,6 +46,7 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat }) => {
     setSending(true)
     const msgText = text
     setText('')
+    setTextSelection({ start: 0, end: 0 })
     try {
       await sendGroupMessage(group.id, user.uid, userProfile?.username || 'User', msgText)
     } catch (err) {
@@ -56,6 +59,30 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat }) => {
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e) }
+  }
+
+  const handleTextSelect = (e) => {
+    setTextSelection({ start: e.target.selectionStart, end: e.target.selectionEnd })
+  }
+
+  const handleFormat = (marker) => {
+    const { start, end } = textSelection
+    if (start === end) return
+    const before = text.slice(0, start)
+    const selected = text.slice(start, end)
+    const after = text.slice(end)
+    const newText = `${before}${marker}${selected}${marker}${after}`
+    setText(newText)
+    const newCursorPos = end + marker.length * 2
+    setTextSelection({ start: 0, end: 0 })
+    setTimeout(() => {
+      const textarea = textareaRef.current
+      if (textarea) {
+        textarea.selectionStart = newCursorPos
+        textarea.selectionEnd = newCursorPos
+        textarea.focus()
+      }
+    }, 0)
   }
 
   const handleEmojiSelect = (emoji) => {
@@ -187,6 +214,10 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat }) => {
       )}
 
       {/* Input */}
+      {textSelection.end > textSelection.start && (
+        <FormattingToolbar onFormat={handleFormat} />
+      )}
+
       <form className="msg-input-bar" onSubmit={handleSend}>
         <div className="media-menu-wrap">
           <button type="button" className="media-menu-btn" onClick={(e) => { e.stopPropagation(); setShowMediaMenu(v => !v); setShowEmoji(false) }} />
@@ -214,6 +245,7 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat }) => {
           value={text}
           onChange={e => setText(e.target.value)}
           onKeyDown={handleKeyDown}
+          onSelect={handleTextSelect}
           placeholder={`Message ${group.name}…`}
           rows={1}
           maxLength={2000}
