@@ -45,6 +45,15 @@ export const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
 export const isValidUsername = (username) => /^[a-zA-Z0-9_]{3,20}$/.test(username)
 
+// Detects whether a message is made up entirely of emoji (and whitespace),
+// used to render it larger with a playful pop-in animation.
+const EMOJI_ONLY_PATTERN = /^(\s|\p{Extended_Pictographic}|\uFE0F|\u200D)+$/u
+export const isEmojiOnly = (text) => {
+  if (!text || text.trim().length === 0) return false
+  if (text.trim().length > 12) return false // avoid false positives on long emoji strings
+  return EMOJI_ONLY_PATTERN.test(text)
+}
+
 export const getStatusIcon = (status) => {
   switch (status) {
     case 'sent': return '✓'

@@ -4,10 +4,10 @@ import UserAvatar from '../ui/UserAvatar.jsx'
 const CallModal = ({ callHook, otherUser, onClose }) => {
   const {
     callState, callType,
-    isMuted, isCameraOff,
+    isMuted, isCameraOff, isScreenSharing,
     localVideoRef, remoteVideoRef,
     callDuration, formatDuration,
-    toggleMute, toggleCamera, hangUp,
+    toggleMute, toggleCamera, toggleScreenShare, hangUp,
   } = callHook
 
   const remoteAudioRef = useRef(null)
@@ -98,6 +98,12 @@ const CallModal = ({ callHook, otherUser, onClose }) => {
             <div className="call-ctrl-group">
               <button className={`call-ctrl-btn ${isCameraOff ? 'active-ctrl' : ''}`} onClick={toggleCamera} />
               <span className="call-ctrl-label">{isCameraOff ? 'Show cam' : 'Hide cam'}</span>
+            </div>
+          )}
+          {callType === 'video' && callState === 'active' && (
+            <div className="call-ctrl-group">
+              <button className={`call-ctrl-btn screen-share-btn ${isScreenSharing ? 'active-ctrl' : ''}`} onClick={toggleScreenShare}>🖥️</button>
+              <span className="call-ctrl-label">{isScreenSharing ? 'Stop share' : 'Share screen'}</span>
             </div>
           )}
           <div className="call-ctrl-group">

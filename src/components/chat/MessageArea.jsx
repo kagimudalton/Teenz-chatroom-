@@ -2,13 +2,14 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useMessages } from '../../hooks/useMessages.js'
 import { useAuth } from '../../features/auth/AuthContext.jsx'
 import { useWallpaper } from '../../hooks/useWallpaper.js'
-import { sendTextMessage, sendMediaMessage, editMessage, setTypingStatus, subscribeToTyping } from '../../services/chatService.js'
+import { sendTextMessage, sendMediaMessage, sendStickerMessage, editMessage, setTypingStatus, subscribeToTyping } from '../../services/chatService.js'
 import { subscribeToUserStatus, formatLastSeen, reportUser } from '../../services/userService.js'
-import { formatTime, getStatusIcon } from '../../utils/helpers.js'
+import { formatTime, getStatusIcon, isEmojiOnly } from '../../utils/helpers.js'
 import UserAvatar from '../ui/UserAvatar.jsx'
 import FullscreenViewer from '../ui/FullscreenViewer.jsx'
 import WallpaperPicker from './WallpaperPicker.jsx'
 import EmojiPicker from './EmojiPicker.jsx'
+import StickerPicker, { getStickerById } from './StickerPicker.jsx'
 import AudioRecorder from './AudioRecorder.jsx'
 import VoiceMessagePlayer from './VoiceMessagePlayer.jsx'
 import FormattedText from './FormattedText.jsx'
@@ -26,6 +27,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
   const [showWallpaper, setShowWallpaper] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [showEmoji, setShowEmoji] = useState(false)
+  const [showStickers, setShowStickers] = useState(false)
   const [showRecorder, setShowRecorder] = useState(false)
   const [userStatus, setUserStatus] = useState({ isOnline: false, lastSeen: null })
   const [editingMsg, setEditingMsg] = useState(null)
@@ -124,6 +126,15 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
     setShowEmoji(false)
   }
 
+  const handleStickerSelect = async (stickerId) => {
+    setShowStickers(false)
+    try {
+      await sendStickerMessage(conversationId, user.uid, otherUser.uid, stickerId)
+    } catch (err) {
+      toast.error(err.message)
+    }
+  }
+
   const handleMediaUpload = async (file, type) => {
     setSending(true)
     setShowMediaMenu(false)
@@ -186,7 +197,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
   const groupedMessages = groupByDate(messages)
 
   return (
-    <div className="message-area" onClick={() => { setShowMediaMenu(false); setShowMenu(false); setShowEmoji(false); setContextMenu(null) }}>
+    <div className="message-area" onClick={() => { setShowMediaMenu(false); setShowMenu(false); setShowEmoji(false); setShowStickers(false); setContextMenu(null) }}>
       {fullscreenMedia && (
         <FullscreenViewer mediaURL={fullscreenMedia.url} mediaType={fullscreenMedia.type} onClose={() => setFullscreenMedia(null)} />
       )}
@@ -267,7 +278,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
                 )}
                 <div className={`msg-bubble ${msg.senderId === user.uid ? 'mine' : 'theirs'} ${msg.type}`}>
                   {msg.type === 'text' && (
-                    <p className="msg-text">
+                    <p className={`msg-text ${isEmojiOnly(msg.text) ? 'emoji-only' : ''}`}>
                       <FormattedText text={msg.text} />
                       {msg.edited && <span className="msg-edited"> (edited)</span>}
                     </p>
@@ -280,6 +291,13 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
                   )}
                   {msg.type === 'audio' && (
                     <VoiceMessagePlayer mediaURL={msg.mediaURL} />
+                  )}
+                  {msg.type === 'sticker' && (
+                    <div className="msg-sticker">
+                      <span className={`sticker-display ${getStickerById(msg.stickerId).animClass}`}>
+                        {getStickerById(msg.stickerId).emoji}
+                      </span>
+                    </div>
                   )}
                   {msg.type === 'call' && (
                     <div className="msg-call">
@@ -345,8 +363,12 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
         <input type="file" ref={imageInputRef} accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files[0] && handleMediaUpload(e.target.files[0], 'image')} />
         <input type="file" ref={videoInputRef} accept="video/*" style={{ display: 'none' }} onChange={e => e.target.files[0] && handleMediaUpload(e.target.files[0], 'video')} />
         <div style={{ position: 'relative', flexShrink: 0 }}>
-          <button type="button" className="emoji-trigger-btn" onClick={(e) => { e.stopPropagation(); setShowEmoji(v => !v); setShowMediaMenu(false) }}>😊</button>
+          <button type="button" className="emoji-trigger-btn" onClick={(e) => { e.stopPropagation(); setShowEmoji(v => !v); setShowMediaMenu(false); setShowStickers(false) }}>😊</button>
           {showEmoji && <EmojiPicker onSelect={handleEmojiSelect} onClose={() => setShowEmoji(false)} />}
+        </div>
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <button type="button" className="emoji-trigger-btn" onClick={(e) => { e.stopPropagation(); setShowStickers(v => !v); setShowMediaMenu(false); setShowEmoji(false) }}>🎨</button>
+          {showStickers && <StickerPicker onSelect={handleStickerSelect} onClose={() => setShowStickers(false)} />}
         </div>
         <textarea ref={textareaRef} className="msg-input" value={text} onChange={handleTyping} onKeyDown={handleKeyDown} placeholder={`Message ${otherUser.username}…`} rows={1} maxLength={2000} />
         <button type="submit" className={`send-btn ${text.trim() ? 'active' : ''}`} disabled={!text.trim() || sending} />

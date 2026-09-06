@@ -10,11 +10,14 @@ export const useCall = () => {
   const [callPartner, setCallPartner] = useState(null)
   const [isMuted, setIsMuted] = useState(false)
   const [isCameraOff, setIsCameraOff] = useState(false)
+  const [isScreenSharing, setIsScreenSharing] = useState(false)
   const [error, setError] = useState(null)
   const [callDuration, setCallDuration] = useState(0)
 
   const peerConnectionRef = useRef(null)
   const localStreamRef = useRef(null)
+  const screenStreamRef = useRef(null)
+  const cameraTrackRef = useRef(null)
   const remoteStreamRef = useRef(null)
   const callIdRef = useRef(null)
   const cleanupRef = useRef(null)
@@ -146,8 +149,57 @@ export const useCall = () => {
     }
   }, [incomingCall])
 
+  const toggleScreenShare = useCallback(async () => {
+    const peerConnection = peerConnectionRef.current
+    if (!peerConnection) return
+
+    if (!isScreenSharing) {
+      try {
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true })
+        const screenTrack = screenStream.getVideoTracks()[0]
+        screenStreamRef.current = screenStream
+
+        const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video')
+        if (sender) {
+          cameraTrackRef.current = sender.track
+          await sender.replaceTrack(screenTrack)
+        }
+        attachStream(localVideoRef, screenStream)
+        setIsScreenSharing(true)
+
+        // Auto-revert if the user stops sharing via the browser's own UI
+        screenTrack.onended = () => {
+          revertToCamera()
+        }
+      } catch (err) {
+        console.warn('Screen share failed or was cancelled:', err.message)
+      }
+    } else {
+      revertToCamera()
+    }
+  }, [isScreenSharing])
+
+  const revertToCamera = useCallback(() => {
+    const peerConnection = peerConnectionRef.current
+    const cameraTrack = cameraTrackRef.current
+    if (peerConnection && cameraTrack) {
+      const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video')
+      if (sender) sender.replaceTrack(cameraTrack)
+      attachStream(localVideoRef, localStreamRef.current)
+    }
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach(t => t.stop())
+      screenStreamRef.current = null
+    }
+    setIsScreenSharing(false)
+  }, [])
+
   const hangUp = useCallback(async () => {
     localStreamRef.current?.getTracks().forEach(t => t.stop())
+    screenStreamRef.current?.getTracks().forEach(t => t.stop())
+    screenStreamRef.current = null
+    cameraTrackRef.current = null
+    setIsScreenSharing(false)
     if (cleanupRef.current) cleanupRef.current()
     if (callIdRef.current) await endCall(callIdRef.current, peerConnectionRef.current)
     setCallState('ended')
@@ -181,10 +233,10 @@ export const useCall = () => {
 
   return {
     callState, callType, callPartner, incomingCall,
-    isMuted, isCameraOff, error,
+    isMuted, isCameraOff, isScreenSharing, error,
     localVideoRef, remoteVideoRef,
     callDuration, formatDuration,
     startCall, acceptCall, rejectIncomingCall, hangUp,
-    toggleMute, toggleCamera,
+    toggleMute, toggleCamera, toggleScreenShare,
   }
 }

@@ -25,6 +25,10 @@ export const sendMediaMessage = async (conversationId, senderId, receiverId, fil
   return sendMessage(conversationId, { senderId, receiverId, type, text: null, mediaURL, replyTo: buildReplyTo(replyingTo) })
 }
 
+export const sendStickerMessage = async (conversationId, senderId, receiverId, stickerId) => {
+  return sendMessage(conversationId, { senderId, receiverId, type: 'sticker', text: null, mediaURL: null, stickerId })
+}
+
 const buildReplyTo = (originalMsg) => {
   if (!originalMsg) return null
   return {
@@ -39,7 +43,7 @@ const sendMessage = async (conversationId, messageData) => {
   const batch = writeBatch(db)
   const messagesRef = collection(db, 'conversations', conversationId, 'messages')
   const msgRef = doc(messagesRef)
-  const message = { messageId: msgRef.id, conversationId, senderId: messageData.senderId, receiverId: messageData.receiverId, type: messageData.type, text: messageData.text, mediaURL: messageData.mediaURL, replyTo: messageData.replyTo || null, status: 'sent', createdAt: serverTimestamp(), deletedFor: [] }
+  const message = { messageId: msgRef.id, conversationId, senderId: messageData.senderId, receiverId: messageData.receiverId, type: messageData.type, text: messageData.text, mediaURL: messageData.mediaURL, stickerId: messageData.stickerId || null, replyTo: messageData.replyTo || null, status: 'sent', createdAt: serverTimestamp(), deletedFor: [] }
   batch.set(msgRef, message)
   const convRef = doc(db, 'conversations', conversationId)
   batch.update(convRef, { lastMessage: { text: messageData.type === 'text' ? messageData.text : `📎 ${messageData.type}`, type: messageData.type, senderId: messageData.senderId }, lastMessageAt: serverTimestamp() })

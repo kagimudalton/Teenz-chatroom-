@@ -1,11 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../../features/auth/AuthContext.jsx'
-import { subscribeToGroupMessages, sendGroupMessage, sendGroupMediaMessage, leaveGroup } from '../../services/groupService.js'
-import { formatTime } from '../../utils/helpers.js'
+import { subscribeToGroupMessages, sendGroupMessage, sendGroupMediaMessage, sendGroupStickerMessage, leaveGroup } from '../../services/groupService.js'
+import { formatTime, isEmojiOnly } from '../../utils/helpers.js'
 import UserAvatar from '../ui/UserAvatar.jsx'
 import FullscreenViewer from '../ui/FullscreenViewer.jsx'
 import EmojiPicker from './EmojiPicker.jsx'
+import StickerPicker, { getStickerById } from './StickerPicker.jsx'
 import FormattedText from './FormattedText.jsx'
+import AudioRecorder from './AudioRecorder.jsx'
+import VoiceMessagePlayer from './VoiceMessagePlayer.jsx'
 import toast from 'react-hot-toast'
 
 const GroupMessageArea = ({ group, onBackToSidebar, onExitChat }) => {
@@ -16,6 +19,9 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat }) => {
   const [sending, setSending] = useState(false)
   const [showEmoji, setShowEmoji] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [showMediaMenu, setShowMediaMenu] = useState(false)
+  const [showStickers, setShowStickers] = useState(false)
+  const [showRecorder, setShowRecorder] = useState(false)
   const [fullscreenMedia, setFullscreenMedia] = useState(null)
   const bottomRef = useRef(null)
   const imageInputRef = useRef(null)
@@ -60,8 +66,31 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat }) => {
 
   const handleMedia = async (file, type) => {
     setSending(true)
+    setShowMediaMenu(false)
     try {
       await sendGroupMediaMessage(group.id, user.uid, userProfile?.username || 'User', file, type)
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const handleStickerSelect = async (stickerId) => {
+    setShowStickers(false)
+    try {
+      await sendGroupStickerMessage(group.id, user.uid, userProfile?.username || 'User', stickerId)
+    } catch (err) {
+      toast.error(err.message)
+    }
+  }
+
+  const handleVoiceNote = async (audioBlob) => {
+    const file = new File([audioBlob], `voice_${Date.now()}.webm`, { type: 'audio/webm' })
+    setSending(true)
+    setShowRecorder(false)
+    try {
+      await sendGroupMediaMessage(group.id, user.uid, userProfile?.username || 'User', file, 'audio')
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -83,7 +112,7 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat }) => {
   const groupedMessages = groupByDate(messages)
 
   return (
-    <div className="message-area" onClick={() => { setShowEmoji(false); setShowMenu(false) }}>
+    <div className="message-area" onClick={() => { setShowEmoji(false); setShowMenu(false); setShowMediaMenu(false); setShowStickers(false) }}>
       {fullscreenMedia && (
         <FullscreenViewer mediaURL={fullscreenMedia.url} mediaType={fullscreenMedia.type} onClose={() => setFullscreenMedia(null)} />
       )}
@@ -128,10 +157,17 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat }) => {
                   <div key={msg.id} className={`msg-bubble-wrap ${isMine ? 'mine' : 'theirs'}`}>
                     <div className={`msg-bubble ${isMine ? 'mine' : 'theirs'} ${msg.type}`}>
                       {!isMine && <div className="group-msg-sender">{msg.senderName}</div>}
-                      {msg.type === 'text' && <p className="msg-text"><FormattedText text={msg.text} /></p>}
+                      {msg.type === 'text' && <p className={`msg-text ${isEmojiOnly(msg.text) ? 'emoji-only' : ''}`}><FormattedText text={msg.text} /></p>}
                       {msg.type === 'image' && <img src={msg.mediaURL} className="msg-image" loading="lazy" onClick={(e) => { e.stopPropagation(); setFullscreenMedia({ url: msg.mediaURL, type: 'image' }) }} />}
                       {msg.type === 'video' && <video src={msg.mediaURL} controls className="msg-video" preload="metadata" />}
-                      {msg.type === 'audio' && <div className="msg-audio"><span>🎤</span><audio src={msg.mediaURL} controls /></div>}
+                      {msg.type === 'audio' && <VoiceMessagePlayer mediaURL={msg.mediaURL} />}
+                      {msg.type === 'sticker' && (
+                        <div className="msg-sticker">
+                          <span className={`sticker-display ${getStickerById(msg.stickerId).animClass}`}>
+                            {getStickerById(msg.stickerId).emoji}
+                          </span>
+                        </div>
+                      )}
                       <div className="msg-meta">
                         <span className="msg-time">{formatTime(msg.createdAt)}</span>
                       </div>
@@ -145,16 +181,32 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat }) => {
         <div ref={bottomRef} />
       </div>
 
+      {/* Audio recorder */}
+      {showRecorder && (
+        <AudioRecorder onSend={handleVoiceNote} onCancel={() => setShowRecorder(false)} />
+      )}
+
       {/* Input */}
       <form className="msg-input-bar" onSubmit={handleSend}>
         <div className="media-menu-wrap">
-          <button type="button" className="media-menu-btn" onClick={(e) => { e.stopPropagation() }} />
+          <button type="button" className="media-menu-btn" onClick={(e) => { e.stopPropagation(); setShowMediaMenu(v => !v); setShowEmoji(false) }} />
+          {showMediaMenu && (
+            <div className="media-menu" onClick={e => e.stopPropagation()}>
+              <button type="button" onClick={() => { imageInputRef.current?.click(); setShowMediaMenu(false) }}>🖼️ Image</button>
+              <button type="button" onClick={() => { videoInputRef.current?.click(); setShowMediaMenu(false) }}>🎬 Video</button>
+              <button type="button" onClick={() => { setShowRecorder(true); setShowMediaMenu(false) }}>🎤 Voice note</button>
+            </div>
+          )}
         </div>
         <input type="file" ref={imageInputRef} accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files[0] && handleMedia(e.target.files[0], 'image')} />
         <input type="file" ref={videoInputRef} accept="video/*" style={{ display: 'none' }} onChange={e => e.target.files[0] && handleMedia(e.target.files[0], 'video')} />
         <div style={{ position: 'relative', flexShrink: 0 }}>
-          <button type="button" className="emoji-trigger-btn" onClick={(e) => { e.stopPropagation(); setShowEmoji(v => !v) }}>😊</button>
+          <button type="button" className="emoji-trigger-btn" onClick={(e) => { e.stopPropagation(); setShowEmoji(v => !v); setShowStickers(false) }}>😊</button>
           {showEmoji && <EmojiPicker onSelect={handleEmojiSelect} onClose={() => setShowEmoji(false)} />}
+        </div>
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <button type="button" className="emoji-trigger-btn" onClick={(e) => { e.stopPropagation(); setShowStickers(v => !v); setShowEmoji(false) }}>🎨</button>
+          {showStickers && <StickerPicker onSelect={handleStickerSelect} onClose={() => setShowStickers(false)} />}
         </div>
         <textarea
           ref={textareaRef}

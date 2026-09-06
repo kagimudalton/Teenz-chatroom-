@@ -28,7 +28,7 @@ export const createGroup = async (creatorId, name, memberIds, photoFile = null) 
   return groupRef.id
 }
 
-export const sendGroupMessage = async (groupId, senderId, senderName, text, type = 'text', mediaURL = null) => {
+export const sendGroupMessage = async (groupId, senderId, senderName, text, type = 'text', mediaURL = null, stickerId = null) => {
   const batch = writeBatch(db)
   const msgRef = doc(collection(db, 'groups', groupId, 'messages'))
   
@@ -40,6 +40,7 @@ export const sendGroupMessage = async (groupId, senderId, senderName, text, type
     type,
     text,
     mediaURL,
+    stickerId,
     status: 'sent',
     createdAt: serverTimestamp(),
     deletedFor: [],
@@ -59,6 +60,10 @@ export const sendGroupMessage = async (groupId, senderId, senderName, text, type
 export const sendGroupMediaMessage = async (groupId, senderId, senderName, file, type) => {
   const mediaURL = await uploadToCloudinary(file, type)
   return sendGroupMessage(groupId, senderId, senderName, `📎 ${type}`, type, mediaURL)
+}
+
+export const sendGroupStickerMessage = async (groupId, senderId, senderName, stickerId) => {
+  return sendGroupMessage(groupId, senderId, senderName, null, 'sticker', null, stickerId)
 }
 
 export const subscribeToGroupMessages = (groupId, callback) => {

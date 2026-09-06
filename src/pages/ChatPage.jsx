@@ -19,6 +19,8 @@ import ProfilePage from './ProfilePage.jsx'
 import { loadUserTheme } from '../services/themeService.js'
 import { formatTimestamp, truncate } from '../utils/helpers.js'
 import { requestNotificationPermission, showMessageNotification } from '../services/notificationService.js'
+import { getActiveHoliday, isHolidayThemeEnabled, setHolidayThemeEnabled } from '../services/holidayService.js'
+import HolidayOverlay from '../components/ui/HolidayOverlay.jsx'
 
 const ChatPage = () => {
   const { userProfile, logout, user } = useAuth()
@@ -34,6 +36,7 @@ const ChatPage = () => {
   const [showCallModal, setShowCallModal] = useState(false)
   const [callerUser, setCallerUser] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [showHolidayEffects, setShowHolidayEffects] = useState(isHolidayThemeEnabled())
 
   useEffect(() => {
     if (user) loadUserTheme(user.uid)
@@ -99,6 +102,15 @@ const ChatPage = () => {
     ...groups.map(g => ({ type: 'group', data: g, time: g.lastMessageAt?.toMillis?.() || 0 })),
   ].sort((a, b) => b.time - a.time)
 
+  const [sidebarTab, setSidebarTab] = useState('all')
+  const isUnread = (item) => (item.data.unreadCount?.[user?.uid] || 0) > 0
+  const visibleChats = allChats.filter(item => {
+    if (sidebarTab === 'unread') return isUnread(item)
+    if (sidebarTab === 'groups') return item.type === 'group'
+    return true
+  })
+  const totalUnreadCount = allChats.filter(isUnread).length
+
   const handleStartCall = (type) => {
     if (!activeChat || activeChat.type !== 'dm') return
     callHook.startCall(activeChat.data.otherUser.uid, activeChat.data.otherUser, type)
@@ -110,8 +122,13 @@ const ChatPage = () => {
     setSidebarOpen(false)
   }
 
+  const activeHoliday = getActiveHoliday()
+
   return (
     <div className="chat-page">
+      {activeHoliday && showHolidayEffects && (
+        <HolidayOverlay particle={activeHoliday.particle} />
+      )}
       {callHook.callState === 'incoming' && callHook.incomingCall && (
         <IncomingCallBanner
           call={callHook.incomingCall}
@@ -164,6 +181,19 @@ const ChatPage = () => {
               <UserAvatar user={userProfile} size={34} />
             </div>
             <button className="theme-toggle-btn" onClick={() => setShowThemePicker(true)}>🎨</button>
+            {activeHoliday && (
+              <button
+                className="theme-toggle-btn"
+                title={showHolidayEffects ? `Turn off ${activeHoliday.name} effects` : `Turn on ${activeHoliday.name} effects`}
+                onClick={() => {
+                  const next = !showHolidayEffects
+                  setShowHolidayEffects(next)
+                  setHolidayThemeEnabled(next)
+                }}
+              >
+                {activeHoliday.particle}
+              </button>
+            )}
             <button className="logout-btn" onClick={logout} />
           </div>
         </div>
@@ -177,12 +207,12 @@ const ChatPage = () => {
         </div>
 
         <div className="conv-list">
-          {allChats.length === 0 && !convsLoading && !groupsLoading ? (
+          {visibleChats.length === 0 && !convsLoading && !groupsLoading ? (
             <div className="conv-list-empty">
-              <p>No chats yet!</p>
-              <p>Start a new chat 👋</p>
+              <p>{sidebarTab === 'unread' ? 'No unread chats' : sidebarTab === 'groups' ? 'No groups yet' : 'No chats yet!'}</p>
+              {sidebarTab === 'all' && <p>Start a new chat 👋</p>}
             </div>
-          ) : allChats.map(({ type, data }) => {
+          ) : visibleChats.map(({ type, data }) => {
             const isActive = activeChat?.data?.id === data.id
             return (
               <button
@@ -218,6 +248,24 @@ const ChatPage = () => {
               </button>
             )
           })}
+        </div>
+
+        <div className="sidebar-bottom-nav">
+          <button className={`bottom-nav-btn ${sidebarTab === 'all' ? 'active' : ''}`} onClick={() => setSidebarTab('all')}>
+            <span className="bottom-nav-icon">💬</span>
+            <span>Chats</span>
+          </button>
+          <button className={`bottom-nav-btn ${sidebarTab === 'unread' ? 'active' : ''}`} onClick={() => setSidebarTab('unread')}>
+            <span className="bottom-nav-icon">
+              📩
+              {totalUnreadCount > 0 && <span className="bottom-nav-badge">{totalUnreadCount}</span>}
+            </span>
+            <span>Unread</span>
+          </button>
+          <button className={`bottom-nav-btn ${sidebarTab === 'groups' ? 'active' : ''}`} onClick={() => setSidebarTab('groups')}>
+            <span className="bottom-nav-icon">👥</span>
+            <span>Groups</span>
+          </button>
         </div>
       </aside>
 
