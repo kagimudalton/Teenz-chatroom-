@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { db } from '../../services/firebase.js'
 import { useAuth } from '../../features/auth/AuthContext.jsx'
 import { getSavedAccounts, removeSavedAccount } from '../../services/accountsService.js'
 import { signInWithGoogle } from '../../services/authService.js'
@@ -17,16 +19,27 @@ const AccountSwitcher = () => {
   const handleSwitch = async (account) => {
     setSwitching(true)
     try {
-      await logout()
       if (account.authProvider === 'google') {
-        await signInWithGoogle({ ageVerified: true, rememberMe: true })
-        navigate('/chat', { replace: true })
+        // Don't await sign-out first — Firebase simply replaces the current
+        // session when a new Google account signs in. Awaiting anything here
+        // consumes the browser's "recent click" window and gets the popup blocked.
+        if (user?.uid) {
+          updateDoc(doc(db, 'users', user.uid), { isOnline: false, lastSeen: serverTimestamp() }).catch(() => {})
+        }
+        const signedInUser = await signInWithGoogle({ ageVerified: true, rememberMe: true })
+        if (signedInUser) navigate('/chat', { replace: true })
+        // If signedInUser is null, a redirect-based fallback kicked in and the page is navigating away.
       } else {
+        await logout()
         navigate('/login', { state: { prefillEmail: account.email } })
       }
     } catch (err) {
-      toast.error('Could not switch accounts. Please log in manually.')
-      navigate('/login', { state: { prefillEmail: account.email } })
+      if (err?.code !== 'auth/popup-closed-by-user') {
+        toast.error('Could not switch accounts. Please try again.')
+      }
+      if (account.authProvider !== 'google') {
+        navigate('/login', { state: { prefillEmail: account.email } })
+      }
     } finally {
       setSwitching(false)
     }

@@ -1,4 +1,4 @@
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, updateProfile, sendPasswordResetEmail, onAuthStateChanged } from 'firebase/auth'
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, updateProfile, sendPasswordResetEmail, onAuthStateChanged } from 'firebase/auth'
 import { doc, setDoc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { auth, db, setAuthPersistence } from './firebase.js'
 import { uploadAvatar } from './cloudinaryService.js'
@@ -40,10 +40,33 @@ export const signInWithEmail = async ({ email, password, rememberMe = true }) =>
 export const signInWithGoogle = async ({ ageVerified, rememberMe = true }) => {
   if (!ageVerified) throw new Error('You must confirm you are 13 or older.')
   await setAuthPersistence(rememberMe)
-  const { user } = await signInWithPopup(auth, googleProvider)
-  await createUserDocument(user.uid, { email: user.email, displayName: user.displayName, photoURL: user.photoURL, ageVerified })
-  logEvent('login', { method: 'google' })
-  return user
+  try {
+    const { user } = await signInWithPopup(auth, googleProvider)
+    await createUserDocument(user.uid, { email: user.email, displayName: user.displayName, photoURL: user.photoURL, ageVerified })
+    logEvent('login', { method: 'google' })
+    return user
+  } catch (err) {
+    if (err.code === 'auth/popup-blocked') {
+      sessionStorage.setItem('teenz_pending_google_age_verified', ageVerified ? 'true' : 'false')
+      await signInWithRedirect(auth, googleProvider)
+      return null
+    }
+    throw err
+  }
+}
+
+export const checkGoogleRedirectResult = async () => {
+  try {
+    const result = await getRedirectResult(auth)
+    if (result?.user) {
+      const ageVerified = sessionStorage.getItem('teenz_pending_google_age_verified') === 'true'
+      sessionStorage.removeItem('teenz_pending_google_age_verified')
+      await createUserDocument(result.user.uid, { email: result.user.email, displayName: result.user.displayName, photoURL: result.user.photoURL, ageVerified })
+      logEvent('login', { method: 'google_redirect' })
+    }
+  } catch (err) {
+    console.warn('Redirect sign-in check failed:', err.message)
+  }
 }
 
 export const signOutUser = async () => {

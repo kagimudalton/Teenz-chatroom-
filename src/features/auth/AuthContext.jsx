@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { subscribeToAuthChanges, getUserDocument, signOutUser } from '../../services/authService.js'
+import { subscribeToAuthChanges, getUserDocument, signOutUser, checkGoogleRedirectResult } from '../../services/authService.js'
 import { trackActiveUser } from '../../services/analyticsService.js'
 import { saveAccount } from '../../services/accountsService.js'
 
@@ -9,6 +9,10 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [userProfile, setUserProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    checkGoogleRedirectResult()
+  }, [])
 
   useEffect(() => {
     const unsubscribe = subscribeToAuthChanges(async (firebaseUser) => {
