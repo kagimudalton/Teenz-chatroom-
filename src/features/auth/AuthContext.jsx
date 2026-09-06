@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { subscribeToAuthChanges, getUserDocument, signOutUser } from '../../services/authService.js'
 import { trackActiveUser } from '../../services/analyticsService.js'
+import { saveAccount } from '../../services/accountsService.js'
 
 const AuthContext = createContext(null)
 
@@ -16,6 +17,14 @@ export const AuthProvider = ({ children }) => {
         const profile = await getUserDocument(firebaseUser.uid)
         setUserProfile(profile)
         trackActiveUser(firebaseUser.uid)
+        const providerId = firebaseUser.providerData?.[0]?.providerId
+        saveAccount({
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          username: profile?.username || firebaseUser.displayName || 'User',
+          photoURL: profile?.photoURL || firebaseUser.photoURL,
+          authProvider: providerId === 'google.com' ? 'google' : 'password',
+        })
       } else {
         setUser(null)
         setUserProfile(null)

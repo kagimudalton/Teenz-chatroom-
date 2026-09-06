@@ -6,6 +6,7 @@ import { uploadAvatar } from '../services/cloudinaryService.js'
 import { updateProfile } from 'firebase/auth'
 import { auth } from '../services/firebase.js'
 import UserAvatar from '../components/ui/UserAvatar.jsx'
+import AccountSwitcher from '../components/chat/AccountSwitcher.jsx'
 import toast from 'react-hot-toast'
 
 const ProfilePage = ({ onClose }) => {
@@ -127,6 +128,9 @@ const ProfilePage = ({ onClose }) => {
               Show last seen to others
             </label>
           </div>
+
+          {/* Accounts */}
+          <AccountSwitcher />
 
           {/* Save */}
           <button

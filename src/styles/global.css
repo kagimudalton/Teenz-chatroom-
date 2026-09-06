@@ -2113,6 +2113,97 @@ img[referrerpolicy="no-referrer"] {
   text-align: right;
 }
 
+/* ─── ACCOUNT SWITCHER ─── */
+.account-switcher {
+  margin: 20px 0;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.account-switcher h3 {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.account-switcher-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.account-switcher-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.account-switcher-item:hover {
+  background: var(--surface-hover);
+}
+
+.account-switcher-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.account-switcher-name {
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+}
+
+.account-switcher-email {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-switcher-remove {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition), color var(--transition);
+}
+.account-switcher-remove:hover {
+  background: rgba(255,80,80,0.2);
+  color: #fff;
+}
+
+.add-account-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 12px;
+  background: transparent;
+  border: 1px dashed rgba(255,255,255,0.2);
+  color: var(--accent-cyan);
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: background var(--transition), border-color var(--transition);
+}
+.add-account-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent-cyan);
+}
+.add-account-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ─── FULLSCREEN MEDIA VIEWER ─── */
 .msg-mono {
   font-family: 'Courier New', monospace;

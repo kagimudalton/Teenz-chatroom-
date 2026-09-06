@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { getInitials } from '../../utils/helpers.js'
+import FullscreenViewer from './FullscreenViewer.jsx'
 
 const COLORS = ['#6C4DFF','#00C853','#FF6B6B','#FFD93D','#00E5FF','#FF8C42','#C77DFF','#48CAE4','#F06292','#4CAF50']
 
@@ -66,23 +67,7 @@ const UserAvatar = ({ user, size = 40, showViewer = false }) => {
       )}
 
       {viewerOpen && (
-        <div
-          className="profile-pic-viewer"
-          onClick={() => setViewerOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <button
-            onClick={() => setViewerOpen(false)}
-            style={{ position: 'absolute', top: 20, right: 20, width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', color: '#fff', fontSize: '1.2rem', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >✕</button>
-          <img
-            src={user.photoURL}
-            alt={user?.username}
-            style={{ width: 280, height: 280, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(255,255,255,0.2)' }}
-            onClick={e => e.stopPropagation()}
-          />
-          <p style={{ marginTop: 16, color: '#fff', fontWeight: 700, fontSize: '1.1rem' }}>{user?.username}</p>
-        </div>
+        <FullscreenViewer mediaURL={user.photoURL} mediaType="image" onClose={() => setViewerOpen(false)} />
       )}
     </>
   )

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../features/auth/AuthContext.jsx'
 import { useConversations } from '../hooks/useConversations.js'
 import { useGroups } from '../hooks/useGroups.js'
@@ -18,6 +18,7 @@ import IncomingCallBanner from '../components/calls/IncomingCallBanner.jsx'
 import ProfilePage from './ProfilePage.jsx'
 import { loadUserTheme } from '../services/themeService.js'
 import { formatTimestamp, truncate } from '../utils/helpers.js'
+import { requestNotificationPermission, showMessageNotification } from '../services/notificationService.js'
 
 const ChatPage = () => {
   const { userProfile, logout, user } = useAuth()
@@ -37,6 +38,55 @@ const ChatPage = () => {
   useEffect(() => {
     if (user) loadUserTheme(user.uid)
   }, [user])
+
+  useEffect(() => {
+    requestNotificationPermission()
+  }, [])
+
+  const prevConvosRef = useRef(new Map())
+  const activeChatRef = useRef(activeChat)
+  useEffect(() => { activeChatRef.current = activeChat }, [activeChat])
+
+  useEffect(() => {
+    const prevMap = prevConvosRef.current
+    conversations.forEach((conv) => {
+      const prevTime = prevMap.get(conv.id)
+      const newTime = conv.lastMessageAt?.toMillis?.() || 0
+      const isFromOther = conv.lastMessage && conv.lastMessage.senderId !== user?.uid
+      const isCurrentlyOpen = activeChatRef.current?.type === 'dm' && activeChatRef.current?.data?.id === conv.id
+      if (prevTime !== undefined && newTime > prevTime && isFromOther && (document.hidden || !isCurrentlyOpen)) {
+        showMessageNotification({
+          title: conv.otherUser?.username || 'New message',
+          body: conv.lastMessage.type === 'text' ? truncate(conv.lastMessage.text, 80) : `📎 ${conv.lastMessage.type}`,
+          icon: conv.otherUser?.photoURL,
+          tag: `conv-${conv.id}`,
+          onClick: () => handleStartConversation(conv.id, conv.otherUser),
+        })
+      }
+      prevMap.set(conv.id, newTime)
+    })
+  }, [conversations, user])
+
+  const prevGroupsRef = useRef(new Map())
+  useEffect(() => {
+    const prevMap = prevGroupsRef.current
+    groups.forEach((grp) => {
+      const prevTime = prevMap.get(grp.id)
+      const newTime = grp.lastMessageAt?.toMillis?.() || 0
+      const isFromOther = grp.lastMessage && grp.lastMessage.senderId !== user?.uid
+      const isCurrentlyOpen = activeChatRef.current?.type === 'group' && activeChatRef.current?.data?.id === grp.id
+      if (prevTime !== undefined && newTime > prevTime && isFromOther && (document.hidden || !isCurrentlyOpen)) {
+        showMessageNotification({
+          title: grp.name || 'New group message',
+          body: grp.lastMessage.type === 'text' ? truncate(grp.lastMessage.text, 80) : `📎 ${grp.lastMessage.type}`,
+          icon: grp.photoURL,
+          tag: `group-${grp.id}`,
+          onClick: () => setActiveChat({ type: 'group', data: grp }),
+        })
+      }
+      prevMap.set(grp.id, newTime)
+    })
+  }, [groups, user])
 
   useEffect(() => {
     if (callHook.incomingCall) {

@@ -7,7 +7,7 @@ const LoginPage = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const from = location.state?.from?.pathname || '/chat'
-  const [form, setForm] = useState({ email: '', password: '' })
+  const [form, setForm] = useState({ email: location.state?.prefillEmail || '', password: '' })
   const [ageVerified, setAgeVerified] = useState(false)
   const [rememberMe, setRememberMe] = useState(true)
   const [loading, setLoading] = useState(false)

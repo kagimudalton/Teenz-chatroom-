@@ -93,7 +93,7 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat }) => {
         <div className="msg-header-user">
           <div className="group-avatar-ring">
             {group.photoURL
-              ? <img src={group.photoURL} style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover' }} />
+              ? <img src={group.photoURL} style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setFullscreenMedia({ url: group.photoURL, type: 'image' }) }} />
               : <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'var(--accent-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>👥</div>
             }
           </div>
