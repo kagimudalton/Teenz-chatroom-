@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../../features/auth/AuthContext.jsx'
-import { subscribeToGroupMessages, sendGroupMessage, sendGroupMediaMessage, sendGroupStickerMessage, leaveGroup } from '../../services/groupService.js'
+import { subscribeToGroupMessages, sendGroupMessage, sendGroupMediaMessage, sendGroupStickerMessage, markGroupAsRead, setGroupDisappearingDuration, leaveGroup } from '../../services/groupService.js'
 import { formatTime, isEmojiOnly } from '../../utils/helpers.js'
 import UserAvatar from '../ui/UserAvatar.jsx'
 import FullscreenViewer from '../ui/FullscreenViewer.jsx'
@@ -12,7 +12,7 @@ import AudioRecorder from './AudioRecorder.jsx'
 import VoiceMessagePlayer from './VoiceMessagePlayer.jsx'
 import toast from 'react-hot-toast'
 
-const GroupMessageArea = ({ group, onBackToSidebar, onExitChat }) => {
+const GroupMessageArea = ({ group, onBackToSidebar, onExitChat, isLocked, hasPinSet, onToggleLock }) => {
   const { user, userProfile } = useAuth()
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
@@ -23,6 +23,7 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat }) => {
   const [showMenu, setShowMenu] = useState(false)
   const [showMediaMenu, setShowMediaMenu] = useState(false)
   const [showStickers, setShowStickers] = useState(false)
+  const [showDisappearingMenu, setShowDisappearingMenu] = useState(false)
   const [showRecorder, setShowRecorder] = useState(false)
   const [fullscreenMedia, setFullscreenMedia] = useState(null)
   const bottomRef = useRef(null)
@@ -40,6 +41,11 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat }) => {
     return () => unsubscribe()
   }, [group?.id])
 
+  useEffect(() => {
+    if (!group?.id || !user?.uid) return
+    markGroupAsRead(group.id, user.uid).catch(console.error)
+  }, [group?.id, user?.uid])
+
   const handleSend = async (e) => {
     e.preventDefault()
     if (!text.trim() || sending) return
@@ -48,7 +54,7 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat }) => {
     setText('')
     setTextSelection({ start: 0, end: 0 })
     try {
-      await sendGroupMessage(group.id, user.uid, userProfile?.username || 'User', msgText)
+      await sendGroupMessage(group.id, user.uid, userProfile?.username || 'User', msgText, 'text', null, null, group.disappearingDuration)
     } catch (err) {
       toast.error(err.message)
       setText(msgText)
@@ -95,7 +101,7 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat }) => {
     setSending(true)
     setShowMediaMenu(false)
     try {
-      await sendGroupMediaMessage(group.id, user.uid, userProfile?.username || 'User', file, type)
+      await sendGroupMediaMessage(group.id, user.uid, userProfile?.username || 'User', file, type, group.disappearingDuration)
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -106,7 +112,7 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat }) => {
   const handleStickerSelect = async (stickerId) => {
     setShowStickers(false)
     try {
-      await sendGroupStickerMessage(group.id, user.uid, userProfile?.username || 'User', stickerId)
+      await sendGroupStickerMessage(group.id, user.uid, userProfile?.username || 'User', stickerId, group.disappearingDuration)
     } catch (err) {
       toast.error(err.message)
     }
@@ -117,7 +123,7 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat }) => {
     setSending(true)
     setShowRecorder(false)
     try {
-      await sendGroupMediaMessage(group.id, user.uid, userProfile?.username || 'User', file, 'audio')
+      await sendGroupMediaMessage(group.id, user.uid, userProfile?.username || 'User', file, 'audio', group.disappearingDuration)
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -139,7 +145,7 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat }) => {
   const groupedMessages = groupByDate(messages)
 
   return (
-    <div className="message-area" onClick={() => { setShowEmoji(false); setShowMenu(false); setShowMediaMenu(false); setShowStickers(false) }}>
+    <div className="message-area" onClick={() => { setShowEmoji(false); setShowMenu(false); setShowMediaMenu(false); setShowStickers(false); setShowDisappearingMenu(false) }}>
       {fullscreenMedia && (
         <FullscreenViewer mediaURL={fullscreenMedia.url} mediaType={fullscreenMedia.type} onClose={() => setFullscreenMedia(null)} />
       )}
@@ -166,7 +172,24 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat }) => {
         </div>
         {showMenu && (
           <div className="header-dropdown" onClick={e => e.stopPropagation()}>
+            {hasPinSet && (
+              <button onClick={() => { onToggleLock(); setShowMenu(false) }}>
+                {isLocked ? '🔓 Unlock chat' : '🔒 Lock chat'}
+              </button>
+            )}
+            <button onClick={() => { setShowDisappearingMenu(true); setShowMenu(false) }}>
+              ⏱️ Disappearing messages {group.disappearingDuration ? '(on)' : '(off)'}
+            </button>
             <button onClick={handleLeave}>🚪 Leave Group</button>
+          </div>
+        )}
+        {showDisappearingMenu && (
+          <div className="header-dropdown" onClick={e => e.stopPropagation()} style={{ right: 0 }}>
+            <button onClick={() => { setGroupDisappearingDuration(group.id, null); setShowDisappearingMenu(false) }}>Off</button>
+            <button onClick={() => { setGroupDisappearingDuration(group.id, 24 * 60 * 60 * 1000); setShowDisappearingMenu(false) }}>24 hours</button>
+            <button onClick={() => { setGroupDisappearingDuration(group.id, 7 * 24 * 60 * 60 * 1000); setShowDisappearingMenu(false) }}>7 days</button>
+            <button onClick={() => { setGroupDisappearingDuration(group.id, 90 * 24 * 60 * 60 * 1000); setShowDisappearingMenu(false) }}>90 days</button>
+            <button onClick={() => setShowDisappearingMenu(false)}>✕ Close</button>
           </div>
         )}
       </div>

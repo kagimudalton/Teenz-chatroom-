@@ -7,6 +7,7 @@ import { updateProfile } from 'firebase/auth'
 import { auth } from '../services/firebase.js'
 import UserAvatar from '../components/ui/UserAvatar.jsx'
 import AccountSwitcher from '../components/chat/AccountSwitcher.jsx'
+import SecuritySettings from '../components/chat/SecuritySettings.jsx'
 import toast from 'react-hot-toast'
 
 const ProfilePage = ({ onClose }) => {
@@ -131,6 +132,9 @@ const ProfilePage = ({ onClose }) => {
 
           {/* Accounts */}
           <AccountSwitcher />
+
+          {/* Security */}
+          <SecuritySettings />
 
           {/* Save */}
           <button

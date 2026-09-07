@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useMessages } from '../../hooks/useMessages.js'
 import { useAuth } from '../../features/auth/AuthContext.jsx'
 import { useWallpaper } from '../../hooks/useWallpaper.js'
-import { sendTextMessage, sendMediaMessage, sendStickerMessage, editMessage, EDIT_WINDOW_MS, setTypingStatus, subscribeToTyping } from '../../services/chatService.js'
+import { sendTextMessage, sendMediaMessage, sendStickerMessage, editMessage, EDIT_WINDOW_MS, setTypingStatus, subscribeToTyping, setDisappearingDuration } from '../../services/chatService.js'
 import { subscribeToUserStatus, formatLastSeen, reportUser } from '../../services/userService.js'
 import { formatTime, getStatusIcon, isEmojiOnly } from '../../utils/helpers.js'
 import UserAvatar from '../ui/UserAvatar.jsx'
@@ -18,7 +18,7 @@ import MessageReactions from './MessageReactions.jsx'
 import ForwardModal from './ForwardModal.jsx'
 import toast from 'react-hot-toast'
 
-const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, onExitChat }) => {
+const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, onExitChat, disappearingDuration, isLocked, hasPinSet, onToggleLock }) => {
   const { user } = useAuth()
   const { messages, loading, bottomRef } = useMessages(conversationId)
   const { wallpaper, updateWallpaper } = useWallpaper()
@@ -29,6 +29,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
   const [showMenu, setShowMenu] = useState(false)
   const [showEmoji, setShowEmoji] = useState(false)
   const [showStickers, setShowStickers] = useState(false)
+  const [showDisappearingMenu, setShowDisappearingMenu] = useState(false)
   const [textSelection, setTextSelection] = useState({ start: 0, end: 0 })
   const [showRecorder, setShowRecorder] = useState(false)
   const [userStatus, setUserStatus] = useState({ isOnline: false, lastSeen: null })
@@ -122,7 +123,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
     setTextSelection({ start: 0, end: 0 })
     setTypingStatus(conversationId, user.uid, false).catch(() => {})
     try {
-      await sendTextMessage(conversationId, user.uid, otherUser.uid, msgText, replyingTo)
+      await sendTextMessage(conversationId, user.uid, otherUser.uid, msgText, replyingTo, disappearingDuration)
     } catch (err) {
       toast.error(err.message)
       setText(msgText)
@@ -156,7 +157,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
   const handleStickerSelect = async (stickerId) => {
     setShowStickers(false)
     try {
-      await sendStickerMessage(conversationId, user.uid, otherUser.uid, stickerId)
+      await sendStickerMessage(conversationId, user.uid, otherUser.uid, stickerId, disappearingDuration)
     } catch (err) {
       toast.error(err.message)
     }
@@ -168,7 +169,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
     const activeReply = replyingTo
     setReplyingTo(null)
     try {
-      await sendMediaMessage(conversationId, user.uid, otherUser.uid, file, type, null, activeReply)
+      await sendMediaMessage(conversationId, user.uid, otherUser.uid, file, type, null, activeReply, disappearingDuration)
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -183,7 +184,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
     const activeReply = replyingTo
     setReplyingTo(null)
     try {
-      await sendMediaMessage(conversationId, user.uid, otherUser.uid, file, 'audio', null, activeReply)
+      await sendMediaMessage(conversationId, user.uid, otherUser.uid, file, 'audio', null, activeReply, disappearingDuration)
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -233,7 +234,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
   const groupedMessages = groupByDate(messages)
 
   return (
-    <div className="message-area" onClick={() => { setShowMediaMenu(false); setShowMenu(false); setShowEmoji(false); setShowStickers(false); setContextMenu(null) }}>
+    <div className="message-area" onClick={() => { setShowMediaMenu(false); setShowMenu(false); setShowEmoji(false); setShowStickers(false); setShowDisappearingMenu(false); setContextMenu(null) }}>
       {fullscreenMedia && (
         <FullscreenViewer mediaURL={fullscreenMedia.url} mediaType={fullscreenMedia.type} onClose={() => setFullscreenMedia(null)} />
       )}
@@ -281,7 +282,24 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
         {showMenu && (
           <div className="header-dropdown" onClick={e => e.stopPropagation()}>
             <button onClick={() => { setShowWallpaper(true); setShowMenu(false) }}>🎨 Wallpaper</button>
+            {hasPinSet && (
+              <button onClick={() => { onToggleLock(); setShowMenu(false) }}>
+                {isLocked ? '🔓 Unlock chat' : '🔒 Lock chat'}
+              </button>
+            )}
+            <button onClick={() => { setShowDisappearingMenu(true); setShowMenu(false) }}>
+              ⏱️ Disappearing messages {disappearingDuration ? '(on)' : '(off)'}
+            </button>
             <button onClick={handleReport}>🚩 Report</button>
+          </div>
+        )}
+        {showDisappearingMenu && (
+          <div className="header-dropdown" onClick={e => e.stopPropagation()} style={{ right: 0 }}>
+            <button onClick={() => { setDisappearingDuration(conversationId, null); setShowDisappearingMenu(false) }}>Off</button>
+            <button onClick={() => { setDisappearingDuration(conversationId, 24 * 60 * 60 * 1000); setShowDisappearingMenu(false) }}>24 hours</button>
+            <button onClick={() => { setDisappearingDuration(conversationId, 7 * 24 * 60 * 60 * 1000); setShowDisappearingMenu(false) }}>7 days</button>
+            <button onClick={() => { setDisappearingDuration(conversationId, 90 * 24 * 60 * 60 * 1000); setShowDisappearingMenu(false) }}>90 days</button>
+            <button onClick={() => setShowDisappearingMenu(false)}>✕ Close</button>
           </div>
         )}
       </div>

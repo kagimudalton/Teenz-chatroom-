@@ -20,11 +20,15 @@ import { loadUserTheme } from '../services/themeService.js'
 import { formatTimestamp, truncate } from '../utils/helpers.js'
 import { requestNotificationPermission, showMessageNotification } from '../services/notificationService.js'
 import { markMessagesAsDelivered } from '../services/chatService.js'
+import { archiveConversation, unarchiveConversation } from '../services/chatService.js'
+import { archiveGroup, unarchiveGroup } from '../services/groupService.js'
+import { isUnlockedThisSession, markUnlockedThisSession, verifyPin, lockChat, unlockChat } from '../services/lockService.js'
+import LockScreen from '../components/auth/LockScreen.jsx'
 import { getActiveHoliday, isHolidayThemeEnabled, setHolidayThemeEnabled } from '../services/holidayService.js'
 import HolidayOverlay from '../components/ui/HolidayOverlay.jsx'
 
 const ChatPage = () => {
-  const { userProfile, logout, user } = useAuth()
+  const { userProfile, logout, user, refreshProfile } = useAuth()
   const { conversations, loading: convsLoading } = useConversations()
   const { groups, loading: groupsLoading } = useGroups()
   const callHook = useCall()
@@ -38,6 +42,11 @@ const ChatPage = () => {
   const [callerUser, setCallerUser] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [showHolidayEffects, setShowHolidayEffects] = useState(isHolidayThemeEnabled())
+  const [appUnlocked, setAppUnlocked] = useState(isUnlockedThisSession())
+  const [chatLockPrompt, setChatLockPrompt] = useState(null) // { type, data } pending unlock
+  const [unlockPinInput, setUnlockPinInput] = useState('')
+  const [unlockError, setUnlockError] = useState('')
+  const [unlockedChatIds, setUnlockedChatIds] = useState(new Set())
 
   useEffect(() => {
     if (user) loadUserTheme(user.uid)
@@ -114,12 +123,49 @@ const ChatPage = () => {
 
   const [sidebarTab, setSidebarTab] = useState('all')
   const isUnread = (item) => (item.data.unreadCount?.[user?.uid] || 0) > 0
+  const isArchived = (item) => (item.data.archivedFor || []).includes(user?.uid)
   const visibleChats = allChats.filter(item => {
+    if (sidebarTab === 'archived') return isArchived(item)
+    if (isArchived(item)) return false
     if (sidebarTab === 'unread') return isUnread(item)
     if (sidebarTab === 'groups') return item.type === 'group'
     return true
   })
-  const totalUnreadCount = allChats.filter(isUnread).length
+  const totalUnreadCount = allChats.filter(item => !isArchived(item) && isUnread(item)).length
+  const totalArchivedCount = allChats.filter(isArchived).length
+
+  const [archiveContextMenu, setArchiveContextMenu] = useState(null) // { type, data }
+
+  const handleToggleArchive = async (item) => {
+    const isCurrentlyArchived = (item.data.archivedFor || []).includes(user.uid)
+    try {
+      if (item.type === 'group') {
+        await (isCurrentlyArchived ? unarchiveGroup : archiveGroup)(item.data.id, user.uid)
+      } else {
+        await (isCurrentlyArchived ? unarchiveConversation : archiveConversation)(item.data.id, user.uid)
+      }
+    } catch (err) {
+      console.error('Archive toggle failed:', err)
+    }
+    setArchiveContextMenu(null)
+  }
+
+  const handleUnlockChat = async (e) => {
+    e.preventDefault()
+    if (!chatLockPrompt) return
+    const valid = await verifyPin(unlockPinInput, userProfile?.security?.pinHash)
+    if (valid) {
+      setUnlockedChatIds(prev => new Set(prev).add(chatLockPrompt.data.id))
+      setActiveChat(chatLockPrompt)
+      setSidebarOpen(false)
+      setChatLockPrompt(null)
+      setUnlockPinInput('')
+      setUnlockError('')
+    } else {
+      setUnlockError('Incorrect PIN.')
+      setUnlockPinInput('')
+    }
+  }
 
   const handleStartCall = (type) => {
     if (!activeChat || activeChat.type !== 'dm') return
@@ -134,8 +180,52 @@ const ChatPage = () => {
 
   const activeHoliday = getActiveHoliday()
 
+  if (userProfile?.security?.appLockEnabled && userProfile?.security?.pinHash && !appUnlocked) {
+    return (
+      <LockScreen
+        pinHash={userProfile.security.pinHash}
+        onUnlock={() => { markUnlockedThisSession(); setAppUnlocked(true) }}
+      />
+    )
+  }
+
   return (
     <div className="chat-page">
+      {archiveContextMenu && (
+        <div className="conv-context-overlay" onClick={() => setArchiveContextMenu(null)}>
+          <div className="conv-context-menu" onClick={e => e.stopPropagation()}>
+            <button onClick={() => handleToggleArchive(archiveContextMenu)}>
+              {(archiveContextMenu.data.archivedFor || []).includes(user.uid) ? '📤 Unarchive chat' : '🗄️ Archive chat'}
+            </button>
+            <button onClick={() => setArchiveContextMenu(null)}>✕ Close</button>
+          </div>
+        </div>
+      )}
+
+      {chatLockPrompt && (
+        <div className="lock-screen" onClick={() => { setChatLockPrompt(null); setUnlockPinInput(''); setUnlockError('') }}>
+          <div className="lock-screen-card" onClick={e => e.stopPropagation()}>
+            <div className="lock-screen-icon">🔒</div>
+            <h2>This chat is locked</h2>
+            <p>Enter your PIN to open it</p>
+            <form onSubmit={handleUnlockChat}>
+              <input
+                type="password"
+                inputMode="numeric"
+                maxLength={6}
+                className="lock-pin-input"
+                value={unlockPinInput}
+                onChange={(e) => setUnlockPinInput(e.target.value.replace(/\D/g, ''))}
+                placeholder="••••"
+                autoFocus
+              />
+              {unlockError && <p className="lock-screen-error">{unlockError}</p>}
+              <button type="submit" className="lock-unlock-btn" disabled={unlockPinInput.length < 4}>Unlock</button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {activeHoliday && showHolidayEffects && (
         <HolidayOverlay particle={activeHoliday.particle} />
       )}
@@ -219,7 +309,7 @@ const ChatPage = () => {
         <div className="conv-list">
           {visibleChats.length === 0 && !convsLoading && !groupsLoading ? (
             <div className="conv-list-empty">
-              <p>{sidebarTab === 'unread' ? 'No unread chats' : sidebarTab === 'groups' ? 'No groups yet' : 'No chats yet!'}</p>
+              <p>{sidebarTab === 'unread' ? 'No unread chats' : sidebarTab === 'groups' ? 'No groups yet' : sidebarTab === 'archived' ? 'No archived chats' : 'No chats yet!'}</p>
               {sidebarTab === 'all' && <p>Start a new chat 👋</p>}
             </div>
           ) : visibleChats.map(({ type, data }) => {
@@ -228,7 +318,16 @@ const ChatPage = () => {
               <button
                 key={data.id}
                 className={`conv-item ${isActive ? 'active' : ''}`}
-                onClick={() => { setActiveChat({ type, data }); setSidebarOpen(false) }}
+                onClick={() => {
+                  const isLocked = userProfile?.security?.lockedChatIds?.includes(data.id) && !unlockedChatIds.has(data.id)
+                  if (isLocked) {
+                    setChatLockPrompt({ type, data })
+                  } else {
+                    setActiveChat({ type, data })
+                    setSidebarOpen(false)
+                  }
+                }}
+                onContextMenu={(e) => { e.preventDefault(); setArchiveContextMenu({ type, data }) }}
               >
                 <div className="conv-avatar-wrap">
                   {type === 'group' ? (
@@ -244,7 +343,10 @@ const ChatPage = () => {
                 </div>
                 <div className="conv-info">
                   <div className="conv-top">
-                    <span className="conv-name">{type === 'group' ? data.name : data.otherUser?.username || 'Unknown'}</span>
+                    <span className="conv-name">
+                      {userProfile?.security?.lockedChatIds?.includes(data.id) && '🔒 '}
+                      {type === 'group' ? data.name : data.otherUser?.username || 'Unknown'}
+                    </span>
                     <span className="conv-time">{formatTimestamp(data.lastMessageAt)}</span>
                   </div>
                   <div className="conv-bottom">
@@ -276,6 +378,13 @@ const ChatPage = () => {
             <span className="bottom-nav-icon">👥</span>
             <span>Groups</span>
           </button>
+          <button className={`bottom-nav-btn ${sidebarTab === 'archived' ? 'active' : ''}`} onClick={() => setSidebarTab('archived')}>
+            <span className="bottom-nav-icon">
+              🗄️
+              {totalArchivedCount > 0 && <span className="bottom-nav-badge">{totalArchivedCount}</span>}
+            </span>
+            <span>Archived</span>
+          </button>
         </div>
       </aside>
 
@@ -285,6 +394,14 @@ const ChatPage = () => {
             <MessageArea
               conversationId={activeChat.data.id}
               otherUser={activeChat.data.otherUser}
+              disappearingDuration={activeChat.data.disappearingDuration}
+              isLocked={userProfile?.security?.lockedChatIds?.includes(activeChat.data.id)}
+              hasPinSet={!!userProfile?.security?.pinHash}
+              onToggleLock={async () => {
+                const locked = userProfile?.security?.lockedChatIds?.includes(activeChat.data.id)
+                await (locked ? unlockChat : lockChat)(user.uid, activeChat.data.id)
+                await refreshProfile()
+              }}
               onStartCall={handleStartCall}
               onBackToSidebar={() => setSidebarOpen(true)}
               onExitChat={() => setActiveChat(null)}
@@ -292,6 +409,13 @@ const ChatPage = () => {
           ) : (
             <GroupMessageArea
               group={activeChat.data}
+              isLocked={userProfile?.security?.lockedChatIds?.includes(activeChat.data.id)}
+              hasPinSet={!!userProfile?.security?.pinHash}
+              onToggleLock={async () => {
+                const locked = userProfile?.security?.lockedChatIds?.includes(activeChat.data.id)
+                await (locked ? unlockChat : lockChat)(user.uid, activeChat.data.id)
+                await refreshProfile()
+              }}
               onBackToSidebar={() => setSidebarOpen(true)}
               onExitChat={() => setActiveChat(null)}
             />

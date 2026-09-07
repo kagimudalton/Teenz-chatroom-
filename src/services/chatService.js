@@ -1,8 +1,20 @@
-import { collection, doc, addDoc, setDoc, getDoc, getDocs, updateDoc, query, where, orderBy, limit, onSnapshot, serverTimestamp, writeBatch, arrayUnion } from 'firebase/firestore'
+import { collection, doc, addDoc, setDoc, getDoc, getDocs, updateDoc, query, where, orderBy, limit, onSnapshot, serverTimestamp, writeBatch, arrayUnion, arrayRemove, increment } from 'firebase/firestore'
 import { db } from './firebase.js'
 import { uploadToCloudinary } from './cloudinaryService.js'
 import { logEvent } from './analyticsService.js'
 import { generateConversationId } from '../utils/helpers.js'
+
+export const archiveConversation = async (conversationId, userId) => {
+  await updateDoc(doc(db, 'conversations', conversationId), { archivedFor: arrayUnion(userId) })
+}
+
+export const unarchiveConversation = async (conversationId, userId) => {
+  await updateDoc(doc(db, 'conversations', conversationId), { archivedFor: arrayRemove(userId) })
+}
+
+export const setDisappearingDuration = async (conversationId, durationMs) => {
+  await updateDoc(doc(db, 'conversations', conversationId), { disappearingDuration: durationMs })
+}
 
 export const getOrCreateConversation = async (uid1, uid2) => {
   const conversationId = generateConversationId(uid1, uid2)
@@ -14,19 +26,19 @@ export const getOrCreateConversation = async (uid1, uid2) => {
   return conversationId
 }
 
-export const sendTextMessage = async (conversationId, senderId, receiverId, text, replyingTo = null) => {
+export const sendTextMessage = async (conversationId, senderId, receiverId, text, replyingTo = null, disappearingDuration = null) => {
   if (!text.trim()) throw new Error('Message cannot be empty.')
   if (text.length > 2000) throw new Error('Message too long.')
-  return sendMessage(conversationId, { senderId, receiverId, type: 'text', text: text.trim(), mediaURL: null, replyTo: buildReplyTo(replyingTo) })
+  return sendMessage(conversationId, { senderId, receiverId, type: 'text', text: text.trim(), mediaURL: null, replyTo: buildReplyTo(replyingTo), disappearingDuration })
 }
 
-export const sendMediaMessage = async (conversationId, senderId, receiverId, file, type, onProgress, replyingTo = null) => {
+export const sendMediaMessage = async (conversationId, senderId, receiverId, file, type, onProgress, replyingTo = null, disappearingDuration = null) => {
   const mediaURL = await uploadToCloudinary(file, type, onProgress)
-  return sendMessage(conversationId, { senderId, receiverId, type, text: null, mediaURL, replyTo: buildReplyTo(replyingTo) })
+  return sendMessage(conversationId, { senderId, receiverId, type, text: null, mediaURL, replyTo: buildReplyTo(replyingTo), disappearingDuration })
 }
 
-export const sendStickerMessage = async (conversationId, senderId, receiverId, stickerId) => {
-  return sendMessage(conversationId, { senderId, receiverId, type: 'sticker', text: null, mediaURL: null, stickerId })
+export const sendStickerMessage = async (conversationId, senderId, receiverId, stickerId, disappearingDuration = null) => {
+  return sendMessage(conversationId, { senderId, receiverId, type: 'sticker', text: null, mediaURL: null, stickerId, disappearingDuration })
 }
 
 const buildReplyTo = (originalMsg) => {
@@ -43,10 +55,11 @@ const sendMessage = async (conversationId, messageData) => {
   const batch = writeBatch(db)
   const messagesRef = collection(db, 'conversations', conversationId, 'messages')
   const msgRef = doc(messagesRef)
-  const message = { messageId: msgRef.id, conversationId, senderId: messageData.senderId, receiverId: messageData.receiverId, type: messageData.type, text: messageData.text, mediaURL: messageData.mediaURL, stickerId: messageData.stickerId || null, replyTo: messageData.replyTo || null, status: 'sent', createdAt: serverTimestamp(), deletedFor: [] }
+  const expiresAt = messageData.disappearingDuration ? Date.now() + messageData.disappearingDuration : null
+  const message = { messageId: msgRef.id, conversationId, senderId: messageData.senderId, receiverId: messageData.receiverId, type: messageData.type, text: messageData.text, mediaURL: messageData.mediaURL, stickerId: messageData.stickerId || null, replyTo: messageData.replyTo || null, status: 'sent', createdAt: serverTimestamp(), expiresAt, deletedFor: [] }
   batch.set(msgRef, message)
   const convRef = doc(db, 'conversations', conversationId)
-  batch.update(convRef, { lastMessage: { text: messageData.type === 'text' ? messageData.text : `📎 ${messageData.type}`, type: messageData.type, senderId: messageData.senderId }, lastMessageAt: serverTimestamp() })
+  batch.update(convRef, { lastMessage: { text: messageData.type === 'text' ? messageData.text : `📎 ${messageData.type}`, type: messageData.type, senderId: messageData.senderId }, lastMessageAt: serverTimestamp(), [`unreadCount.${messageData.receiverId}`]: increment(1) })
   await batch.commit()
   logEvent('message_sent', { type: messageData.type })
   return message
@@ -81,7 +94,13 @@ export const markMessagesAsRead = async (conversationId, currentUserId) => {
 
 export const subscribeToMessages = (conversationId, callback, messageLimit = 50) => {
   const q = query(collection(db, 'conversations', conversationId, 'messages'), orderBy('createdAt', 'asc'), limit(messageLimit))
-  return onSnapshot(q, (snapshot) => { callback(snapshot.docs.map((d) => ({ ...d.data(), id: d.id }))) }, (err) => { console.warn('Messages listener error:', err) })
+  return onSnapshot(q, (snapshot) => {
+    const now = Date.now()
+    const messages = snapshot.docs
+      .map((d) => ({ ...d.data(), id: d.id }))
+      .filter((msg) => !msg.expiresAt || msg.expiresAt > now)
+    callback(messages)
+  }, (err) => { console.warn('Messages listener error:', err) })
 }
 
 export const subscribeToConversations = (userId, callback) => {
