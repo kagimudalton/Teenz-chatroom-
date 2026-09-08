@@ -114,8 +114,8 @@ export const answerCall = async (callId) => {
   return { peerConnection, callData, cleanup: unsubscribeCallerCandidates }
 }
 
-export const rejectCall = async (callId) => {
-  await updateDoc(doc(db, 'calls', callId), { status: 'rejected', endedAt: serverTimestamp() })
+export const rejectCall = async (callId, reason = 'declined') => {
+  await updateDoc(doc(db, 'calls', callId), { status: 'rejected', reason, endedAt: serverTimestamp() })
 }
 
 export const endCall = async (callId, peerConnection) => {

@@ -132,7 +132,7 @@ const ChatPage = () => {
     return true
   })
   const totalUnreadCount = allChats.filter(item => !isArchived(item) && isUnread(item)).length
-  const totalArchivedCount = allChats.filter(isArchived).length
+  const totalArchivedCount = allChats.filter(item => isArchived(item) && isUnread(item)).length
 
   const [archiveContextMenu, setArchiveContextMenu] = useState(null) // { type, data }
 
@@ -177,6 +177,12 @@ const ChatPage = () => {
     setActiveChat({ type: 'dm', data: { id: convId, otherUser } })
     setSidebarOpen(false)
   }
+
+  const liveActiveChatData = activeChat
+    ? (activeChat.type === 'group'
+        ? groups.find(g => g.id === activeChat.data.id) || activeChat.data
+        : conversations.find(c => c.id === activeChat.data.id) || activeChat.data)
+    : null
 
   const activeHoliday = getActiveHoliday()
 
@@ -355,6 +361,9 @@ const ChatPage = () => {
                         ? `${data.lastMessage.senderId === user.uid ? 'You: ' : ''}${data.lastMessage.type === 'text' ? truncate(data.lastMessage.text, 28) : `📎 ${data.lastMessage.type}`}`
                         : 'Say something!'}
                     </span>
+                    {(data.unreadCount?.[user?.uid] || 0) > 0 && (
+                      <span className="conv-unread-badge">{data.unreadCount[user.uid]}</span>
+                    )}
                   </div>
                 </div>
               </button>
@@ -392,14 +401,14 @@ const ChatPage = () => {
         {activeChat ? (
           activeChat.type === 'dm' ? (
             <MessageArea
-              conversationId={activeChat.data.id}
-              otherUser={activeChat.data.otherUser}
-              disappearingDuration={activeChat.data.disappearingDuration}
-              isLocked={userProfile?.security?.lockedChatIds?.includes(activeChat.data.id)}
+              conversationId={liveActiveChatData.id}
+              otherUser={liveActiveChatData.otherUser}
+              disappearingDuration={liveActiveChatData.disappearingDuration}
+              isLocked={userProfile?.security?.lockedChatIds?.includes(liveActiveChatData.id)}
               hasPinSet={!!userProfile?.security?.pinHash}
               onToggleLock={async () => {
-                const locked = userProfile?.security?.lockedChatIds?.includes(activeChat.data.id)
-                await (locked ? unlockChat : lockChat)(user.uid, activeChat.data.id)
+                const locked = userProfile?.security?.lockedChatIds?.includes(liveActiveChatData.id)
+                await (locked ? unlockChat : lockChat)(user.uid, liveActiveChatData.id)
                 await refreshProfile()
               }}
               onStartCall={handleStartCall}
@@ -408,12 +417,12 @@ const ChatPage = () => {
             />
           ) : (
             <GroupMessageArea
-              group={activeChat.data}
-              isLocked={userProfile?.security?.lockedChatIds?.includes(activeChat.data.id)}
+              group={liveActiveChatData}
+              isLocked={userProfile?.security?.lockedChatIds?.includes(liveActiveChatData.id)}
               hasPinSet={!!userProfile?.security?.pinHash}
               onToggleLock={async () => {
-                const locked = userProfile?.security?.lockedChatIds?.includes(activeChat.data.id)
-                await (locked ? unlockChat : lockChat)(user.uid, activeChat.data.id)
+                const locked = userProfile?.security?.lockedChatIds?.includes(liveActiveChatData.id)
+                await (locked ? unlockChat : lockChat)(user.uid, liveActiveChatData.id)
                 await refreshProfile()
               }}
               onBackToSidebar={() => setSidebarOpen(true)}

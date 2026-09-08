@@ -1,5 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { initiateCall, answerCall, rejectCall, endCall, getLocalStream, addStreamToPeerConnection, subscribeToIncomingCalls } from '../services/callService.js'
+import { doc, onSnapshot } from 'firebase/firestore'
+import { db } from '../services/firebase.js'
+import { logCallMessage } from '../services/chatService.js'
+import { generateConversationId } from '../utils/helpers.js'
 import { useAuth } from '../features/auth/AuthContext.jsx'
 
 export const useCall = () => {
@@ -18,6 +22,12 @@ export const useCall = () => {
   const localStreamRef = useRef(null)
   const screenStreamRef = useRef(null)
   const cameraTrackRef = useRef(null)
+  const isCallerRef = useRef(false)
+  const reachedActiveRef = useRef(false)
+  const callStartTimeRef = useRef(null)
+  const callDocUnsubRef = useRef(null)
+  const currentReceiverIdRef = useRef(null)
+  const loggedOutcomeRef = useRef(false)
   const remoteStreamRef = useRef(null)
   const callIdRef = useRef(null)
   const cleanupRef = useRef(null)
@@ -62,6 +72,11 @@ export const useCall = () => {
       setCallState('calling')
       setCallType(type)
       setCallPartner(partnerUser)
+      isCallerRef.current = true
+      reachedActiveRef.current = false
+      callStartTimeRef.current = null
+      currentReceiverIdRef.current = partnerId
+      loggedOutcomeRef.current = false
 
       const stream = await getLocalStream(type === 'video', true)
       localStreamRef.current = stream
@@ -83,6 +98,8 @@ export const useCall = () => {
         remoteStreamRef.current = remoteStream
         attachStream(remoteVideoRef, remoteStream)
         setCallState('active')
+        reachedActiveRef.current = true
+        callStartTimeRef.current = Date.now()
       }
 
       peerConnection.onconnectionstatechange = () => {
@@ -91,6 +108,20 @@ export const useCall = () => {
           hangUp()
         }
       }
+
+      // Watch the call doc so we know if the other side declines or doesn't answer in time
+      callDocUnsubRef.current = onSnapshot(doc(db, 'calls', callId), (snap) => {
+        const data = snap.data()
+        if (!data || loggedOutcomeRef.current) return
+        if (data.status === 'rejected' && !reachedActiveRef.current) {
+          loggedOutcomeRef.current = true
+          const outcome = data.reason === 'timeout' ? 'missed' : 'declined'
+          const conversationId = generateConversationId(user.uid, partnerId)
+          logCallMessage(conversationId, user.uid, partnerId, type, outcome).catch(console.error)
+          setCallState('ended')
+          setTimeout(() => setCallState('idle'), 2000)
+        }
+      })
     } catch (err) {
       console.error('startCall error:', err)
       setError(err.message)
@@ -103,6 +134,9 @@ export const useCall = () => {
     try {
       setError(null)
       const { callId, type } = incomingCall
+      isCallerRef.current = false
+      reachedActiveRef.current = false
+      loggedOutcomeRef.current = true // receiver never logs; caller's side handles the log
 
       const stream = await getLocalStream(type === 'video', true)
       localStreamRef.current = stream
@@ -123,6 +157,7 @@ export const useCall = () => {
         remoteStreamRef.current = remoteStream
         attachStream(remoteVideoRef, remoteStream)
         setCallState('active')
+        reachedActiveRef.current = true
       }
 
       peerConnection.onconnectionstatechange = () => {
@@ -133,6 +168,7 @@ export const useCall = () => {
       }
 
       setCallState('active')
+      reachedActiveRef.current = true
       setIncomingCall(null)
     } catch (err) {
       console.error('acceptCall error:', err)
@@ -141,9 +177,9 @@ export const useCall = () => {
     }
   }, [incomingCall])
 
-  const rejectIncomingCall = useCallback(async () => {
+  const rejectIncomingCall = useCallback(async (reason = 'declined') => {
     if (incomingCall) {
-      await rejectCall(incomingCall.callId)
+      await rejectCall(incomingCall.callId, reason)
       setIncomingCall(null)
       setCallState('idle')
     }
@@ -200,16 +236,33 @@ export const useCall = () => {
     screenStreamRef.current = null
     cameraTrackRef.current = null
     setIsScreenSharing(false)
+    if (callDocUnsubRef.current) { callDocUnsubRef.current(); callDocUnsubRef.current = null }
     if (cleanupRef.current) cleanupRef.current()
     if (callIdRef.current) await endCall(callIdRef.current, peerConnectionRef.current)
+
+    if (isCallerRef.current && !loggedOutcomeRef.current && currentReceiverIdRef.current) {
+      loggedOutcomeRef.current = true
+      const conversationId = generateConversationId(user.uid, currentReceiverIdRef.current)
+      if (reachedActiveRef.current && callStartTimeRef.current) {
+        const durationSeconds = Math.round((Date.now() - callStartTimeRef.current) / 1000)
+        logCallMessage(conversationId, user.uid, currentReceiverIdRef.current, callType, 'completed', durationSeconds).catch(console.error)
+      } else {
+        logCallMessage(conversationId, user.uid, currentReceiverIdRef.current, callType, 'cancelled').catch(console.error)
+      }
+    }
+
     setCallState('ended')
     setCallPartner(null)
     setIncomingCall(null)
     peerConnectionRef.current = null
     localStreamRef.current = null
     callIdRef.current = null
+    isCallerRef.current = false
+    reachedActiveRef.current = false
+    callStartTimeRef.current = null
+    currentReceiverIdRef.current = null
     setTimeout(() => setCallState('idle'), 2000)
-  }, [])
+  }, [user, callType])
 
   const toggleMute = useCallback(() => {
     if (localStreamRef.current) {

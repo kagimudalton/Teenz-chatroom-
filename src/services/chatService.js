@@ -4,6 +4,29 @@ import { uploadToCloudinary } from './cloudinaryService.js'
 import { logEvent } from './analyticsService.js'
 import { generateConversationId } from '../utils/helpers.js'
 
+export const logCallMessage = async (conversationId, callerId, receiverId, callType, callStatus, durationSeconds = null) => {
+  const statusText = {
+    completed: 'Call ended',
+    missed: 'Missed call',
+    declined: 'Call declined',
+    cancelled: 'Call cancelled',
+  }[callStatus] || 'Call ended'
+
+  const text = durationSeconds
+    ? `${statusText} • ${Math.floor(durationSeconds / 60)}:${String(durationSeconds % 60).padStart(2, '0')}`
+    : statusText
+
+  return sendMessage(conversationId, {
+    senderId: callerId,
+    receiverId,
+    type: 'call',
+    text,
+    mediaURL: null,
+    callType,
+    callStatus,
+  })
+}
+
 export const archiveConversation = async (conversationId, userId) => {
   await updateDoc(doc(db, 'conversations', conversationId), { archivedFor: arrayUnion(userId) })
 }
@@ -56,7 +79,7 @@ const sendMessage = async (conversationId, messageData) => {
   const messagesRef = collection(db, 'conversations', conversationId, 'messages')
   const msgRef = doc(messagesRef)
   const expiresAt = messageData.disappearingDuration ? Date.now() + messageData.disappearingDuration : null
-  const message = { messageId: msgRef.id, conversationId, senderId: messageData.senderId, receiverId: messageData.receiverId, type: messageData.type, text: messageData.text, mediaURL: messageData.mediaURL, stickerId: messageData.stickerId || null, replyTo: messageData.replyTo || null, status: 'sent', createdAt: serverTimestamp(), expiresAt, deletedFor: [] }
+  const message = { messageId: msgRef.id, conversationId, senderId: messageData.senderId, receiverId: messageData.receiverId, type: messageData.type, text: messageData.text, mediaURL: messageData.mediaURL, stickerId: messageData.stickerId || null, callType: messageData.callType || null, callStatus: messageData.callStatus || null, replyTo: messageData.replyTo || null, status: 'sent', createdAt: serverTimestamp(), expiresAt, deletedFor: [] }
   batch.set(msgRef, message)
   const convRef = doc(db, 'conversations', conversationId)
   batch.update(convRef, { lastMessage: { text: messageData.type === 'text' ? messageData.text : `📎 ${messageData.type}`, type: messageData.type, senderId: messageData.senderId }, lastMessageAt: serverTimestamp(), [`unreadCount.${messageData.receiverId}`]: increment(1) })
