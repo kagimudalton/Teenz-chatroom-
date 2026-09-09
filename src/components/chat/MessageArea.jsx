@@ -3,6 +3,7 @@ import { useMessages } from '../../hooks/useMessages.js'
 import { useAuth } from '../../features/auth/AuthContext.jsx'
 import { useWallpaper } from '../../hooks/useWallpaper.js'
 import { sendTextMessage, sendMediaMessage, sendStickerMessage, editMessage, EDIT_WINDOW_MS, setTypingStatus, subscribeToTyping, setDisappearingDuration } from '../../services/chatService.js'
+import { checkImageNSFW } from '../../services/moderationService.js'
 import { subscribeToUserStatus, formatLastSeen, reportUser } from '../../services/userService.js'
 import { formatTime, getStatusIcon, isEmojiOnly } from '../../utils/helpers.js'
 import UserAvatar from '../ui/UserAvatar.jsx'
@@ -169,6 +170,13 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
     const activeReply = replyingTo
     setReplyingTo(null)
     try {
+      if (type === 'image') {
+        const { flagged } = await checkImageNSFW(file)
+        if (flagged) {
+          toast.error("This image can't be sent — it looks like it may contain explicit content.")
+          return
+        }
+      }
       await sendMediaMessage(conversationId, user.uid, otherUser.uid, file, type, null, activeReply, disappearingDuration)
     } catch (err) {
       toast.error(err.message)

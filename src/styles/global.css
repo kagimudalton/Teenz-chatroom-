@@ -2127,6 +2127,113 @@ img[referrerpolicy="no-referrer"] {
   text-align: right;
 }
 
+/* ─── STORY ADD MENU & TEXT STATUS ─── */
+.story-add-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  background: rgba(20,16,50,0.98);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  min-width: 170px;
+  z-index: 60;
+  animation: slideUp 0.15s ease;
+}
+.story-add-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 16px;
+  width: 100%;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+}
+.story-add-menu-item:hover {
+  background: var(--surface-hover);
+}
+
+.text-story-composer {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: #0F0C29;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+}
+
+.text-story-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  font-size: 1.1rem;
+  z-index: 10;
+}
+
+.text-story-preview {
+  flex: 1;
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  margin-top: 50px;
+}
+
+.text-story-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.6rem;
+  font-weight: 700;
+  text-align: center;
+  resize: none;
+  outline: none;
+  font-family: var(--font-display);
+  line-height: 1.4;
+}
+.text-story-input::placeholder {
+  color: rgba(255,255,255,0.6);
+}
+
+.text-story-bg-picker {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  padding: 20px 0;
+}
+
+.text-story-bg-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  transition: transform var(--transition), border-color var(--transition);
+}
+.text-story-bg-swatch.active {
+  border-color: #fff;
+  transform: scale(1.15);
+}
+
+.text-story-post-btn {
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+  color: #fff;
+  font-weight: 700;
+}
+.text-story-post-btn:disabled {
+  opacity: 0.5;
+}
+
 /* ─── ACCOUNT SWITCHER ─── */
 .account-switcher {
   margin: 20px 0;

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../../features/auth/AuthContext.jsx'
 import { subscribeToGroupMessages, sendGroupMessage, sendGroupMediaMessage, sendGroupStickerMessage, markGroupAsRead, setGroupDisappearingDuration, leaveGroup } from '../../services/groupService.js'
+import { checkImageNSFW } from '../../services/moderationService.js'
 import { formatTime, isEmojiOnly } from '../../utils/helpers.js'
 import UserAvatar from '../ui/UserAvatar.jsx'
 import FullscreenViewer from '../ui/FullscreenViewer.jsx'
@@ -101,6 +102,13 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat, isLocked, hasPin
     setSending(true)
     setShowMediaMenu(false)
     try {
+      if (type === 'image') {
+        const { flagged } = await checkImageNSFW(file)
+        if (flagged) {
+          toast.error("This image can't be sent — it looks like it may contain explicit content.")
+          return
+        }
+      }
       await sendGroupMediaMessage(group.id, user.uid, userProfile?.username || 'User', file, type, group.disappearingDuration)
     } catch (err) {
       toast.error(err.message)

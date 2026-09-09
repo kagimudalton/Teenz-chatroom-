@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { recordStoryView, getStoryViewers } from '../../services/storiesService.js'
 import { formatStoryExpiry } from '../../utils/helpers.js'
+import { STORY_BACKGROUNDS } from './TextStoryComposer.jsx'
 import UserAvatar from '../ui/UserAvatar.jsx'
 
 const STORY_DURATION_MS = 5000
@@ -106,7 +107,10 @@ const StoryViewer = ({ storyGroup, currentUserId, onClose }) => {
           />
         )}
         {currentStory.type === 'text' && (
-          <div className="story-text-card" style={{ background: currentStory.backgroundColor || '#6C4DFF', color: currentStory.textColor || '#fff' }}>
+          <div
+            className="story-text-card"
+            style={{ background: STORY_BACKGROUNDS.find(bg => bg.key === currentStory.background)?.css || currentStory.backgroundColor || '#6C4DFF' }}
+          >
             <p>{currentStory.text}</p>
           </div>
         )}

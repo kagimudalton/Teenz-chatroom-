@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { useStories } from '../../hooks/useStories.js'
 import { useAuth } from '../../features/auth/AuthContext.jsx'
 import { uploadStory } from '../../services/storiesService.js'
+import { checkImageNSFW } from '../../services/moderationService.js'
 import StoryViewer from './StoryViewer.jsx'
+import TextStoryComposer from './TextStoryComposer.jsx'
 import UserAvatar from '../ui/UserAvatar.jsx'
 import toast from 'react-hot-toast'
 
@@ -11,6 +13,8 @@ const StoriesBar = () => {
   const { storiesByUser, loading } = useStories()
   const [viewingStories, setViewingStories] = useState(null)
   const [uploading, setUploading] = useState(false)
+  const [showAddMenu, setShowAddMenu] = useState(false)
+  const [showTextComposer, setShowTextComposer] = useState(false)
 
   const handleAddStory = async (e) => {
     const file = e.target.files[0]
@@ -18,6 +22,13 @@ const StoriesBar = () => {
     setUploading(true)
     const type = file.type.startsWith('image') ? 'image' : 'video'
     try {
+      if (type === 'image') {
+        const { flagged } = await checkImageNSFW(file)
+        if (flagged) {
+          toast.error("This image can't be posted — it looks like it may contain explicit content.")
+          return
+        }
+      }
       await uploadStory(user.uid, file, type)
       toast.success('Story posted! 🔥')
     } catch (err) {
@@ -33,7 +44,7 @@ const StoriesBar = () => {
 
   return (
     <>
-      <div className="stories-bar">
+      <div className="stories-bar" onClick={() => setShowAddMenu(false)}>
         {/* My story */}
         <div className="story-item-wrap">
           <button
@@ -46,10 +57,27 @@ const StoriesBar = () => {
             <span className="story-label">My story</span>
           </button>
           {/* Small FAB add button */}
-          <label className="story-add-fab" title={uploading ? 'Uploading…' : 'Add story'}>
-            <input type="file" accept="image/*,video/*" onChange={handleAddStory} disabled={uploading} style={{ display: 'none' }} />
-            {uploading ? '⏳' : '+'}
-          </label>
+          <div style={{ position: 'relative' }}>
+            <button
+              className="story-add-fab"
+              title={uploading ? 'Uploading…' : 'Add story'}
+              onClick={(e) => { e.stopPropagation(); setShowAddMenu(v => !v) }}
+              disabled={uploading}
+            >
+              {uploading ? '⏳' : '+'}
+            </button>
+            {showAddMenu && (
+              <div className="story-add-menu" onClick={e => e.stopPropagation()}>
+                <label className="story-add-menu-item">
+                  <input type="file" accept="image/*,video/*" onChange={(e) => { setShowAddMenu(false); handleAddStory(e) }} style={{ display: 'none' }} />
+                  🖼️ Photo / Video
+                </label>
+                <button className="story-add-menu-item" onClick={() => { setShowAddMenu(false); setShowTextComposer(true) }}>
+                  ✏️ Text status
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Others stories */}
@@ -74,6 +102,14 @@ const StoriesBar = () => {
 
       {viewingStories && (
         <StoryViewer storyGroup={viewingStories} currentUserId={user.uid} onClose={() => setViewingStories(null)} />
+      )}
+
+      {showTextComposer && (
+        <TextStoryComposer
+          userId={user.uid}
+          onClose={() => setShowTextComposer(false)}
+          onPosted={() => setShowTextComposer(false)}
+        />
       )}
     </>
   )

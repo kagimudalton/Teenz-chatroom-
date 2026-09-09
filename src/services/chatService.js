@@ -4,6 +4,17 @@ import { uploadToCloudinary } from './cloudinaryService.js'
 import { logEvent } from './analyticsService.js'
 import { generateConversationId } from '../utils/helpers.js'
 
+export const getContactIds = async (userId) => {
+  const q = query(collection(db, 'conversations'), where('participants', 'array-contains', userId))
+  const snap = await getDocs(q)
+  const contactIds = new Set()
+  snap.docs.forEach((d) => {
+    const participants = d.data().participants || []
+    participants.forEach((p) => { if (p !== userId) contactIds.add(p) })
+  })
+  return contactIds
+}
+
 export const logCallMessage = async (conversationId, callerId, receiverId, callType, callStatus, durationSeconds = null) => {
   const statusText = {
     completed: 'Call ended',
