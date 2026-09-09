@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { recordStoryView, getStoryViewers } from '../../services/storiesService.js'
+import { getOrCreateConversation, sendTextMessage } from '../../services/chatService.js'
 import { formatStoryExpiry } from '../../utils/helpers.js'
 import { STORY_BACKGROUNDS } from './TextStoryComposer.jsx'
 import UserAvatar from '../ui/UserAvatar.jsx'
+import toast from 'react-hot-toast'
 
 const STORY_DURATION_MS = 5000
 
@@ -13,6 +15,8 @@ const StoryViewer = ({ storyGroup, currentUserId, onClose }) => {
   const [paused, setPaused] = useState(false)
   const [viewers, setViewers] = useState(null)
   const [showViewers, setShowViewers] = useState(false)
+  const [replyText, setReplyText] = useState('')
+  const [sendingReply, setSendingReply] = useState(false)
   const progressRef = useRef(null)
   const videoRef = useRef(null)
   const currentStory = stories[currentIndex]
@@ -69,6 +73,25 @@ const StoryViewer = ({ storyGroup, currentUserId, onClose }) => {
     } catch { setViewers([]) }
   }
 
+  const handleSendReply = async (e) => {
+    e.preventDefault()
+    if (!replyText.trim() || sendingReply) return
+    setSendingReply(true)
+    try {
+      const conversationId = await getOrCreateConversation(currentUserId, storyUser.uid)
+      const prefix = currentStory.type === 'text'
+        ? `Replied to your status "${(currentStory.text || '').slice(0, 40)}": `
+        : 'Replied to your status: '
+      await sendTextMessage(conversationId, currentUserId, storyUser.uid, prefix + replyText.trim())
+      toast.success('Reply sent!')
+      setReplyText('')
+    } catch (err) {
+      toast.error('Failed to send reply.')
+    } finally {
+      setSendingReply(false)
+    }
+  }
+
   if (!currentStory) return null
 
   return (
@@ -116,6 +139,22 @@ const StoryViewer = ({ storyGroup, currentUserId, onClose }) => {
         )}
         {currentStory.caption && <div className="story-caption">{currentStory.caption}</div>}
       </div>
+      {!isOwner && !showViewers && (
+        <form className="story-reply-bar" onClick={e => e.stopPropagation()} onSubmit={handleSendReply}>
+          <input
+            type="text"
+            className="story-reply-input"
+            placeholder={`Reply to ${storyUser.username}...`}
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            onFocus={() => setPaused(true)}
+            onBlur={() => { if (!replyText) setPaused(false) }}
+            maxLength={300}
+          />
+          <button type="submit" className="story-reply-send-btn" disabled={!replyText.trim() || sendingReply}>➤</button>
+        </form>
+      )}
+
       {showViewers && (
         <div className="viewers-panel" onClick={e => e.stopPropagation()}>
           <div className="viewers-panel-header">

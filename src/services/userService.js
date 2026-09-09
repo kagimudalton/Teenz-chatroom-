@@ -51,12 +51,14 @@ export const blockUser = async (currentUserId, blockedUserId) => {
 }
 
 // Report a user
-export const reportUser = async (reporterId, reportedId, reason) => {
+export const reportUser = async (reporterId, reportedId, reason, messageContext = null) => {
   const { addDoc } = await import('firebase/firestore')
   await addDoc(collection(db, 'reports'), {
     reporterId,
     reportedId,
     reason,
+    messageId: messageContext?.messageId || null,
+    messageSnapshot: messageContext?.text || null,
     createdAt: serverTimestamp(),
     status: 'pending',
   })

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../../features/auth/AuthContext.jsx'
 import { subscribeToGroupMessages, sendGroupMessage, sendGroupMediaMessage, sendGroupStickerMessage, markGroupAsRead, setGroupDisappearingDuration, leaveGroup } from '../../services/groupService.js'
 import { checkImageNSFW } from '../../services/moderationService.js'
+import LazyVideo from './LazyVideo.jsx'
 import { formatTime, isEmojiOnly } from '../../utils/helpers.js'
 import UserAvatar from '../ui/UserAvatar.jsx'
 import FullscreenViewer from '../ui/FullscreenViewer.jsx'
@@ -217,7 +218,7 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat, isLocked, hasPin
                       {!isMine && <div className="group-msg-sender">{msg.senderName}</div>}
                       {msg.type === 'text' && <p className={`msg-text ${isEmojiOnly(msg.text) ? 'emoji-only' : ''}`}><FormattedText text={msg.text} /></p>}
                       {msg.type === 'image' && <img src={msg.mediaURL} className="msg-image" loading="lazy" onClick={(e) => { e.stopPropagation(); setFullscreenMedia({ url: msg.mediaURL, type: 'image' }) }} />}
-                      {msg.type === 'video' && <video src={msg.mediaURL} controls className="msg-video" preload="metadata" />}
+                      {msg.type === 'video' && <LazyVideo src={msg.mediaURL} className="msg-video" />}
                       {msg.type === 'audio' && <VoiceMessagePlayer mediaURL={msg.mediaURL} />}
                       {msg.type === 'sticker' && (
                         <div className="msg-sticker">
@@ -280,6 +281,8 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat, isLocked, hasPin
           placeholder={`Message ${group.name}…`}
           rows={1}
           maxLength={2000}
+          spellCheck="true"
+          lang="en"
         />
         <button type="submit" className={`send-btn ${text.trim() ? 'active' : ''}`} disabled={!text.trim() || sending} />
       </form>

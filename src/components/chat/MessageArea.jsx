@@ -12,6 +12,8 @@ import WallpaperPicker from './WallpaperPicker.jsx'
 import EmojiPicker from './EmojiPicker.jsx'
 import StickerPicker, { getStickerById } from './StickerPicker.jsx'
 import FormattingToolbar from './FormattingToolbar.jsx'
+import ReportReasonPicker from './ReportReasonPicker.jsx'
+import LazyVideo from './LazyVideo.jsx'
 import AudioRecorder from './AudioRecorder.jsx'
 import VoiceMessagePlayer from './VoiceMessagePlayer.jsx'
 import FormattedText from './FormattedText.jsx'
@@ -31,6 +33,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
   const [showEmoji, setShowEmoji] = useState(false)
   const [showStickers, setShowStickers] = useState(false)
   const [showDisappearingMenu, setShowDisappearingMenu] = useState(false)
+  const [reportingMsg, setReportingMsg] = useState(null)
   const [textSelection, setTextSelection] = useState({ start: 0, end: 0 })
   const [showRecorder, setShowRecorder] = useState(false)
   const [userStatus, setUserStatus] = useState({ isOnline: false, lastSeen: null })
@@ -263,8 +266,26 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
             <button onClick={() => { setEditingMsg(contextMenu); setEditText(contextMenu.text); setContextMenu(null) }}>✏️ Edit</button>
           )}
           <button onClick={() => { setForwardMsg(contextMenu); setContextMenu(null) }}>↗️ Forward</button>
+          {contextMenu.senderId !== user.uid && (
+            <button onClick={() => { setReportingMsg(contextMenu); setContextMenu(null) }}>🚩 Report</button>
+          )}
           <button onClick={() => setContextMenu(null)}>✕ Close</button>
         </div>
+      )}
+
+      {reportingMsg && (
+        <ReportReasonPicker
+          onClose={() => setReportingMsg(null)}
+          onSelect={async (reason) => {
+            try {
+              await reportUser(user.uid, otherUser.uid, reason, reportingMsg)
+              toast.success('Report submitted. Thank you for helping keep the app safe.')
+            } catch (err) {
+              toast.error('Failed to submit report.')
+            }
+            setReportingMsg(null)
+          }}
+        />
       )}
 
       {/* Header */}
@@ -349,7 +370,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
                     <img src={msg.mediaURL} alt="Shared" className="msg-image" loading="lazy" onClick={(e) => { e.stopPropagation(); setFullscreenMedia({ url: msg.mediaURL, type: 'image' }) }} />
                   )}
                   {msg.type === 'video' && (
-                    <video src={msg.mediaURL} controls className="msg-video" preload="metadata" />
+                    <LazyVideo src={msg.mediaURL} className="msg-video" />
                   )}
                   {msg.type === 'audio' && (
                     <VoiceMessagePlayer mediaURL={msg.mediaURL} />
@@ -436,7 +457,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
           <button type="button" className="emoji-trigger-btn" onClick={(e) => { e.stopPropagation(); setShowStickers(v => !v); setShowMediaMenu(false); setShowEmoji(false) }}>🎨</button>
           {showStickers && <StickerPicker onSelect={handleStickerSelect} onClose={() => setShowStickers(false)} />}
         </div>
-        <textarea ref={textareaRef} className="msg-input" value={text} onChange={handleTyping} onKeyDown={handleKeyDown} onSelect={handleTextSelect} placeholder={`Message ${otherUser.username}…`} rows={1} maxLength={2000} />
+        <textarea ref={textareaRef} className="msg-input" value={text} onChange={handleTyping} onKeyDown={handleKeyDown} onSelect={handleTextSelect} placeholder={`Message ${otherUser.username}…`} rows={1} maxLength={2000} spellCheck="true" lang="en" />
         <button type="submit" className={`send-btn ${text.trim() ? 'active' : ''}`} disabled={!text.trim() || sending} />
       </form>
     </div>
