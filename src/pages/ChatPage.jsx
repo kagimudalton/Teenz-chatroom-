@@ -24,6 +24,7 @@ import { archiveConversation, unarchiveConversation } from '../services/chatServ
 import { archiveGroup, unarchiveGroup } from '../services/groupService.js'
 import { isUnlockedThisSession, markUnlockedThisSession, verifyPin, lockChat, unlockChat } from '../services/lockService.js'
 import LockScreen from '../components/auth/LockScreen.jsx'
+import FullscreenViewer from '../components/ui/FullscreenViewer.jsx'
 import { getActiveHoliday, isHolidayThemeEnabled, setHolidayThemeEnabled } from '../services/holidayService.js'
 import HolidayOverlay from '../components/ui/HolidayOverlay.jsx'
 
@@ -135,6 +136,7 @@ const ChatPage = () => {
   const totalArchivedCount = allChats.filter(item => isArchived(item) && isUnread(item)).length
 
   const [archiveContextMenu, setArchiveContextMenu] = useState(null) // { type, data }
+  const [fullscreenAvatar, setFullscreenAvatar] = useState(null)
 
   const handleToggleArchive = async (item) => {
     const isCurrentlyArchived = (item.data.archivedFor || []).includes(user.uid)
@@ -230,6 +232,10 @@ const ChatPage = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {fullscreenAvatar && (
+        <FullscreenViewer mediaURL={fullscreenAvatar.url} mediaType={fullscreenAvatar.type} onClose={() => setFullscreenAvatar(null)} />
       )}
 
       {activeHoliday && showHolidayEffects && (
@@ -338,11 +344,11 @@ const ChatPage = () => {
                 <div className="conv-avatar-wrap">
                   {type === 'group' ? (
                     data.photoURL
-                      ? <img src={data.photoURL} style={{ width: 46, height: 46, minWidth: 46, minHeight: 46, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                      ? <img src={data.photoURL} style={{ width: 46, height: 46, minWidth: 46, minHeight: 46, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setFullscreenAvatar({ url: data.photoURL, type: 'image' }) }} />
                       : <div style={{ width: 46, height: 46, minWidth: 46, minHeight: 46, borderRadius: '50%', background: 'var(--accent-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>👥</div>
                   ) : (
                     <>
-                      <UserAvatar user={data.otherUser} size={46} />
+                      <UserAvatar user={data.otherUser} size={46} showViewer={true} />
                       {data.otherUser?.isOnline && <span className="online-dot" />}
                     </>
                   )}

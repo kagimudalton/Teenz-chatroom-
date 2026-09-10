@@ -18,9 +18,11 @@ export const subscribeToUserStatus = (userId, callback) => {
   return onSnapshot(doc(db, 'users', userId), (snap) => {
     if (snap.exists()) {
       const data = snap.data()
+      const isPrivate = data.showLastSeen === false
       callback({
-        isOnline: data.isOnline || false,
-        lastSeen: data.lastSeen,
+        isOnline: isPrivate ? false : (data.isOnline || false),
+        lastSeen: isPrivate ? null : data.lastSeen,
+        isPrivate,
       })
     }
   })

@@ -126,13 +126,14 @@ export const markMessagesAsRead = async (conversationId, currentUserId) => {
   }
 }
 
-export const subscribeToMessages = (conversationId, callback, messageLimit = 50) => {
+export const subscribeToMessages = (conversationId, viewerId, callback, messageLimit = 50) => {
   const q = query(collection(db, 'conversations', conversationId, 'messages'), orderBy('createdAt', 'asc'), limit(messageLimit))
   return onSnapshot(q, (snapshot) => {
     const now = Date.now()
     const messages = snapshot.docs
       .map((d) => ({ ...d.data(), id: d.id }))
       .filter((msg) => !msg.expiresAt || msg.expiresAt > now)
+      .filter((msg) => !(msg.deletedFor || []).includes(viewerId))
     callback(messages)
   }, (err) => { console.warn('Messages listener error:', err) })
 }
@@ -178,6 +179,21 @@ export const searchUsers = async (searchTerm, currentUserId) => {
 
 export const deleteMessageForUser = async (conversationId, messageId, userId) => {
   await updateDoc(doc(db, 'conversations', conversationId, 'messages', messageId), { deletedFor: arrayUnion(userId) })
+}
+
+export const deleteMessageForEveryone = async (conversationId, messageId, senderId, createdAt = null) => {
+  if (createdAt) {
+    const sentTime = createdAt?.toDate ? createdAt.toDate().getTime() : new Date(createdAt).getTime()
+    if (Date.now() - sentTime > EDIT_WINDOW_MS) {
+      throw new Error('This message is too old to delete for everyone (15 minute limit).')
+    }
+  }
+  await updateDoc(doc(db, 'conversations', conversationId, 'messages', messageId), {
+    deletedForEveryone: true,
+    text: null,
+    mediaURL: null,
+    stickerId: null,
+  })
 }
 
 export const EDIT_WINDOW_MS = 15 * 60 * 1000

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useMessages } from '../../hooks/useMessages.js'
 import { useAuth } from '../../features/auth/AuthContext.jsx'
 import { useWallpaper } from '../../hooks/useWallpaper.js'
-import { sendTextMessage, sendMediaMessage, sendStickerMessage, editMessage, EDIT_WINDOW_MS, setTypingStatus, subscribeToTyping, setDisappearingDuration } from '../../services/chatService.js'
+import { sendTextMessage, sendMediaMessage, sendStickerMessage, editMessage, EDIT_WINDOW_MS, setTypingStatus, subscribeToTyping, setDisappearingDuration, deleteMessageForUser, deleteMessageForEveryone } from '../../services/chatService.js'
 import { checkImageNSFW } from '../../services/moderationService.js'
 import { subscribeToUserStatus, formatLastSeen, reportUser } from '../../services/userService.js'
 import { formatTime, getStatusIcon, isEmojiOnly } from '../../utils/helpers.js'
@@ -36,7 +36,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
   const [reportingMsg, setReportingMsg] = useState(null)
   const [textSelection, setTextSelection] = useState({ start: 0, end: 0 })
   const [showRecorder, setShowRecorder] = useState(false)
-  const [userStatus, setUserStatus] = useState({ isOnline: false, lastSeen: null })
+  const [userStatus, setUserStatus] = useState({ isOnline: false, lastSeen: null, isPrivate: false })
   const [editingMsg, setEditingMsg] = useState(null)
   const [editText, setEditText] = useState('')
   const [replyingTo, setReplyingTo] = useState(null)
@@ -218,10 +218,36 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
   }
 
   const canEditMessage = (msg) => {
-    if (msg.senderId !== user.uid || msg.type !== 'text') return false
+    if (msg.senderId !== user.uid || msg.type !== 'text' || msg.deletedForEveryone) return false
     const sentTime = msg.createdAt?.toDate ? msg.createdAt.toDate().getTime() : 0
     if (!sentTime) return true // optimistic: allow if timestamp not yet resolved locally
     return Date.now() - sentTime <= EDIT_WINDOW_MS
+  }
+
+  const canDeleteForEveryone = (msg) => {
+    if (msg.senderId !== user.uid || msg.deletedForEveryone) return false
+    const sentTime = msg.createdAt?.toDate ? msg.createdAt.toDate().getTime() : 0
+    if (!sentTime) return true
+    return Date.now() - sentTime <= EDIT_WINDOW_MS
+  }
+
+  const handleDeleteForMe = async (msg) => {
+    try {
+      await deleteMessageForUser(conversationId, msg.messageId || msg.id, user.uid)
+    } catch (err) {
+      toast.error('Failed to delete message.')
+    }
+    setContextMenu(null)
+  }
+
+  const handleDeleteForEveryone = async (msg) => {
+    try {
+      await deleteMessageForEveryone(conversationId, msg.messageId || msg.id, user.uid, msg.createdAt)
+      toast.success('Message deleted.')
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete message.')
+    }
+    setContextMenu(null)
   }
 
   const handleReport = async () => {
@@ -238,9 +264,13 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
     setContextMenu(msg)
   }
 
-  const statusText = userStatus.isOnline
-    ? otherTyping ? '✍️ typing...' : 'Online'
-    : formatLastSeen(userStatus.lastSeen)
+  const statusText = otherTyping
+    ? '✍️ typing...'
+    : userStatus.isPrivate
+      ? ''
+      : userStatus.isOnline
+        ? 'Online'
+        : formatLastSeen(userStatus.lastSeen)
 
   const groupedMessages = groupByDate(messages)
 
@@ -268,6 +298,10 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
           <button onClick={() => { setForwardMsg(contextMenu); setContextMenu(null) }}>↗️ Forward</button>
           {contextMenu.senderId !== user.uid && (
             <button onClick={() => { setReportingMsg(contextMenu); setContextMenu(null) }}>🚩 Report</button>
+          )}
+          <button onClick={() => handleDeleteForMe(contextMenu)}>🗑️ Delete for me</button>
+          {canDeleteForEveryone(contextMenu) && (
+            <button onClick={() => handleDeleteForEveryone(contextMenu)}>🚫 Delete for everyone</button>
           )}
           <button onClick={() => setContextMenu(null)}>✕ Close</button>
         </div>
@@ -360,15 +394,19 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
                   <div className="forwarded-label">↗️ Forwarded</div>
                 )}
                 <div className={`msg-bubble ${msg.senderId === user.uid ? 'mine' : 'theirs'} ${msg.type}`}>
-                  {msg.type === 'text' && (
-                    <p className={`msg-text ${isEmojiOnly(msg.text) ? 'emoji-only' : ''}`}>
-                      <FormattedText text={msg.text} />
-                      {msg.edited && <span className="msg-edited"> (edited)</span>}
-                    </p>
-                  )}
-                  {msg.type === 'image' && (
-                    <img src={msg.mediaURL} alt="Shared" className="msg-image" loading="lazy" onClick={(e) => { e.stopPropagation(); setFullscreenMedia({ url: msg.mediaURL, type: 'image' }) }} />
-                  )}
+                  {msg.deletedForEveryone ? (
+                    <p className="msg-deleted-placeholder">🚫 This message was deleted</p>
+                  ) : (
+                    <>
+                      {msg.type === 'text' && (
+                        <p className={`msg-text ${isEmojiOnly(msg.text) ? 'emoji-only' : ''}`}>
+                          <FormattedText text={msg.text} />
+                          {msg.edited && <span className="msg-edited"> (edited)</span>}
+                        </p>
+                      )}
+                      {msg.type === 'image' && (
+                        <img src={msg.mediaURL} alt="Shared" className="msg-image" loading="lazy" onClick={(e) => { e.stopPropagation(); setFullscreenMedia({ url: msg.mediaURL, type: 'image' }) }} />
+                      )}
                   {msg.type === 'video' && (
                     <LazyVideo src={msg.mediaURL} className="msg-video" />
                   )}
@@ -387,6 +425,8 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
                       <span className="msg-call-icon">{msg.callStatus === 'missed' ? '📵' : msg.callType === 'video' ? '📹' : '📞'}</span>
                       <span className="msg-call-text">{msg.text}</span>
                     </div>
+                  )}
+                    </>
                   )}
                   <div className="msg-meta">
                     <span className="msg-time">{formatTime(msg.createdAt)}</span>

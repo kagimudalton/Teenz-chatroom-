@@ -11,7 +11,7 @@ export const useMessages = (conversationId) => {
   useEffect(() => {
     if (!conversationId || !user) return
     setLoading(true)
-    const unsubscribe = subscribeToMessages(conversationId, (msgs) => {
+    const unsubscribe = subscribeToMessages(conversationId, user.uid, (msgs) => {
       setMessages(msgs)
       setLoading(false)
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)

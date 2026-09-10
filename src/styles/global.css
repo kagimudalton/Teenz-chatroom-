@@ -407,6 +407,12 @@ input,textarea{font-family:inherit;color:inherit}
   font-style: italic;
 }
 
+.msg-deleted-placeholder {
+  font-style: italic;
+  color: rgba(255,255,255,0.55);
+  font-size: 0.88rem;
+}
+
 /* Story ring fix - show for all accounts */
 .story-circle.has-story {
   padding: 2px;

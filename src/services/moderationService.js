@@ -30,7 +30,7 @@ const fileToImage = (file) => new Promise((resolve, reject) => {
 })
 
 // Returns { flagged: boolean, reason: string|null, predictions: [...] }
-// Flags images classified as Porn or Hentai above a high-confidence threshold.
+// Flags images classified as Porn, Hentai, or very-high-confidence Sexy.
 export const checkImageNSFW = async (file) => {
   try {
     const model = await loadModel()
@@ -40,8 +40,9 @@ export const checkImageNSFW = async (file) => {
 
     const porn = predictions.find(p => p.className === 'Porn')?.probability || 0
     const hentai = predictions.find(p => p.className === 'Hentai')?.probability || 0
+    const sexy = predictions.find(p => p.className === 'Sexy')?.probability || 0
 
-    if (porn > 0.75 || hentai > 0.75) {
+    if (porn > 0.6 || hentai > 0.6 || sexy > 0.85) {
       return { flagged: true, reason: 'explicit', predictions }
     }
     return { flagged: false, reason: null, predictions }
