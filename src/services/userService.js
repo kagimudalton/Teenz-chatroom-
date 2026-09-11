@@ -1,4 +1,4 @@
-import { doc, updateDoc, onSnapshot, serverTimestamp, collection, getDocs, query, where } from 'firebase/firestore'
+import { doc, updateDoc, onSnapshot, serverTimestamp, collection, getDoc, getDocs, query, where, arrayUnion, arrayRemove } from 'firebase/firestore'
 import { db } from './firebase.js'
 
 // Update online status
@@ -50,6 +50,23 @@ export const blockUser = async (currentUserId, blockedUserId) => {
   await updateDoc(doc(db, 'users', currentUserId), {
     blockedUsers: arrayUnion(blockedUserId),
   })
+}
+
+export const unblockUser = async (currentUserId, blockedUserId) => {
+  await updateDoc(doc(db, 'users', currentUserId), {
+    blockedUsers: arrayRemove(blockedUserId),
+  })
+}
+
+export const getBlockedUsers = async (currentUserId) => {
+  const snap = await getDoc(doc(db, 'users', currentUserId))
+  const blockedIds = snap.exists() ? (snap.data().blockedUsers || []) : []
+  if (blockedIds.length === 0) return []
+  const profiles = await Promise.all(blockedIds.map(async (uid) => {
+    const userSnap = await getDoc(doc(db, 'users', uid))
+    return userSnap.exists() ? { ...userSnap.data(), uid } : null
+  }))
+  return profiles.filter(Boolean)
 }
 
 // Report a user

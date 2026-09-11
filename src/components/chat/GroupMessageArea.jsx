@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../../features/auth/AuthContext.jsx'
-import { subscribeToGroupMessages, sendGroupMessage, sendGroupMediaMessage, sendGroupStickerMessage, markGroupAsRead, setGroupDisappearingDuration, leaveGroup } from '../../services/groupService.js'
+import { subscribeToGroupMessages, sendGroupMessage, sendGroupMediaMessage, sendGroupStickerMessage, markGroupAsRead, setGroupDisappearingDuration, setGroupTypingStatus, subscribeToGroupTyping, leaveGroup } from '../../services/groupService.js'
 import { checkImageNSFW } from '../../services/moderationService.js'
 import LazyVideo from './LazyVideo.jsx'
 import { formatTime, isEmojiOnly } from '../../utils/helpers.js'
@@ -22,6 +22,8 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat, isLocked, hasPin
   const [textSelection, setTextSelection] = useState({ start: 0, end: 0 })
   const [sending, setSending] = useState(false)
   const [showEmoji, setShowEmoji] = useState(false)
+  const [othersTyping, setOthersTyping] = useState(false)
+  const typingTimeoutRef = useRef(null)
   const [showMenu, setShowMenu] = useState(false)
   const [showMediaMenu, setShowMediaMenu] = useState(false)
   const [showStickers, setShowStickers] = useState(false)
@@ -48,6 +50,15 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat, isLocked, hasPin
     markGroupAsRead(group.id, user.uid).catch(console.error)
   }, [group?.id, user?.uid])
 
+  useEffect(() => {
+    if (!group?.id) return
+    const unsubscribe = subscribeToGroupTyping(group.id, (typingMap) => {
+      const someoneElseTyping = Object.entries(typingMap).some(([uid, isTyping]) => isTyping && uid !== user?.uid)
+      setOthersTyping(someoneElseTyping)
+    })
+    return () => unsubscribe()
+  }, [group?.id, user?.uid])
+
   const handleSend = async (e) => {
     e.preventDefault()
     if (!text.trim() || sending) return
@@ -55,6 +66,7 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat, isLocked, hasPin
     const msgText = text
     setText('')
     setTextSelection({ start: 0, end: 0 })
+    setGroupTypingStatus(group.id, user.uid, false).catch(() => {})
     try {
       await sendGroupMessage(group.id, user.uid, userProfile?.username || 'User', msgText, 'text', null, null, group.disappearingDuration)
     } catch (err) {
@@ -67,6 +79,16 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat, isLocked, hasPin
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e) }
+  }
+
+  const handleTyping = (e) => {
+    setText(e.target.value)
+    if (!group?.id || !user?.uid) return
+    setGroupTypingStatus(group.id, user.uid, true).catch(() => {})
+    clearTimeout(typingTimeoutRef.current)
+    typingTimeoutRef.current = setTimeout(() => {
+      setGroupTypingStatus(group.id, user.uid, false).catch(() => {})
+    }, 2000)
   }
 
   const handleTextSelect = (e) => {
@@ -170,7 +192,7 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat, isLocked, hasPin
           </div>
           <div>
             <div className="msg-header-name">{group.name}</div>
-            <div className="msg-header-status">{group.members?.length} members</div>
+            <div className="msg-header-status">{othersTyping ? '✍️ typing...' : `${group.members?.length} members`}</div>
           </div>
         </div>
         <div className="msg-header-actions">
@@ -275,7 +297,7 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat, isLocked, hasPin
           ref={textareaRef}
           className="msg-input"
           value={text}
-          onChange={e => setText(e.target.value)}
+          onChange={handleTyping}
           onKeyDown={handleKeyDown}
           onSelect={handleTextSelect}
           placeholder={`Message ${group.name}…`}

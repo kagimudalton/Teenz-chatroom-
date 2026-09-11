@@ -2,9 +2,9 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useMessages } from '../../hooks/useMessages.js'
 import { useAuth } from '../../features/auth/AuthContext.jsx'
 import { useWallpaper } from '../../hooks/useWallpaper.js'
-import { sendTextMessage, sendMediaMessage, sendStickerMessage, editMessage, EDIT_WINDOW_MS, setTypingStatus, subscribeToTyping, setDisappearingDuration, deleteMessageForUser, deleteMessageForEveryone } from '../../services/chatService.js'
+import { sendTextMessage, sendMediaMessage, sendStickerMessage, editMessage, EDIT_WINDOW_MS, setTypingStatus, subscribeToTyping, setDisappearingDuration, deleteMessageForUser, deleteMessageForEveryone, pinMessage, unpinMessage } from '../../services/chatService.js'
 import { checkImageNSFW } from '../../services/moderationService.js'
-import { subscribeToUserStatus, formatLastSeen, reportUser } from '../../services/userService.js'
+import { subscribeToUserStatus, formatLastSeen, reportUser, blockUser, unblockUser } from '../../services/userService.js'
 import { formatTime, getStatusIcon, isEmojiOnly } from '../../utils/helpers.js'
 import UserAvatar from '../ui/UserAvatar.jsx'
 import FullscreenViewer from '../ui/FullscreenViewer.jsx'
@@ -21,8 +21,8 @@ import MessageReactions from './MessageReactions.jsx'
 import ForwardModal from './ForwardModal.jsx'
 import toast from 'react-hot-toast'
 
-const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, onExitChat, disappearingDuration, isLocked, hasPinSet, onToggleLock }) => {
-  const { user } = useAuth()
+const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, onExitChat, disappearingDuration, isLocked, hasPinSet, onToggleLock, isBlocked, pinnedMessage }) => {
+  const { user, refreshProfile } = useAuth()
   const { messages, loading, bottomRef } = useMessages(conversationId)
   const { wallpaper, updateWallpaper } = useWallpaper()
   const [text, setText] = useState('')
@@ -34,6 +34,9 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
   const [showStickers, setShowStickers] = useState(false)
   const [showDisappearingMenu, setShowDisappearingMenu] = useState(false)
   const [reportingMsg, setReportingMsg] = useState(null)
+  const [showSearch, setShowSearch] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [highlightedMsgId, setHighlightedMsgId] = useState(null)
   const [textSelection, setTextSelection] = useState({ start: 0, end: 0 })
   const [showRecorder, setShowRecorder] = useState(false)
   const [userStatus, setUserStatus] = useState({ isOnline: false, lastSeen: null, isPrivate: false })
@@ -250,6 +253,33 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
     setContextMenu(null)
   }
 
+  const handleTogglePin = async (msg) => {
+    try {
+      const isPinned = pinnedMessage?.messageId === (msg.messageId || msg.id)
+      if (isPinned) {
+        await unpinMessage(conversationId)
+      } else {
+        await pinMessage(conversationId, msg)
+      }
+    } catch {
+      toast.error('Failed to update pin')
+    }
+    setContextMenu(null)
+  }
+
+  const scrollToMessage = (messageId) => {
+    const el = document.getElementById(`msg-${messageId}`)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setHighlightedMsgId(messageId)
+      setTimeout(() => setHighlightedMsgId(null), 1800)
+    }
+  }
+
+  const searchResults = searchQuery.trim()
+    ? messages.filter(m => m.type === 'text' && m.text?.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+    : []
+
   const handleReport = async () => {
     try {
       await reportUser(user.uid, otherUser.uid, 'Reported by user')
@@ -258,6 +288,24 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
     } catch {
       toast.error('Failed to report')
     }
+  }
+
+  const handleToggleBlock = async () => {
+    try {
+      if (isBlocked) {
+        await unblockUser(user.uid, otherUser.uid)
+        await refreshProfile()
+        toast.success(`Unblocked ${otherUser.username}`)
+      } else {
+        await blockUser(user.uid, otherUser.uid)
+        await refreshProfile()
+        toast.success(`Blocked ${otherUser.username}`)
+        onExitChat?.()
+      }
+    } catch {
+      toast.error('Failed to update block status')
+    }
+    setShowMenu(false)
   }
 
   const handleLongPress = (msg) => {
@@ -296,6 +344,9 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
             <button onClick={() => { setEditingMsg(contextMenu); setEditText(contextMenu.text); setContextMenu(null) }}>✏️ Edit</button>
           )}
           <button onClick={() => { setForwardMsg(contextMenu); setContextMenu(null) }}>↗️ Forward</button>
+          <button onClick={() => handleTogglePin(contextMenu)}>
+            {pinnedMessage?.messageId === (contextMenu.messageId || contextMenu.id) ? '📌 Unpin' : '📌 Pin message'}
+          </button>
           {contextMenu.senderId !== user.uid && (
             <button onClick={() => { setReportingMsg(contextMenu); setContextMenu(null) }}>🚩 Report</button>
           )}
@@ -335,6 +386,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
           </div>
         </div>
         <div className="msg-header-actions">
+          <button className="call-btn" onClick={(e) => { e.stopPropagation(); setShowSearch(v => !v); setSearchQuery('') }} title="Search">🔍</button>
           <button className="call-btn audio" onClick={() => onStartCall('audio')} title="Voice call" />
           <button className="call-btn video" onClick={() => onStartCall('video')} title="Video call" />
           <button className="call-btn" onClick={(e) => { e.stopPropagation(); setShowMenu(v => !v) }} title="More" />
@@ -354,6 +406,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
               ⏱️ Disappearing messages {disappearingDuration ? '(on)' : '(off)'}
             </button>
             <button onClick={handleReport}>🚩 Report</button>
+            <button onClick={handleToggleBlock}>{isBlocked ? '✅ Unblock user' : '🚫 Block user'}</button>
           </div>
         )}
         {showDisappearingMenu && (
@@ -366,6 +419,51 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
           </div>
         )}
       </div>
+
+      {showSearch && (
+        <div className="msg-search-bar">
+          <input
+            type="text"
+            className="msg-search-input"
+            placeholder="Search in this chat..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            autoFocus
+          />
+          <button className="msg-search-close" onClick={() => { setShowSearch(false); setSearchQuery('') }}>✕</button>
+          {searchQuery.trim() && (
+            <div className="msg-search-results">
+              {searchResults.length === 0 ? (
+                <p className="msg-search-empty">No messages found</p>
+              ) : (
+                searchResults.map((m) => (
+                  <button
+                    key={m.id}
+                    className="msg-search-result-item"
+                    onClick={() => { scrollToMessage(m.messageId || m.id); setShowSearch(false) }}
+                  >
+                    <span className="msg-search-result-sender">{m.senderId === user.uid ? 'You' : otherUser.username}</span>
+                    <span className="msg-search-result-text">{m.text}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {pinnedMessage && (
+        <div className="pinned-message-banner" onClick={() => scrollToMessage(pinnedMessage.messageId)}>
+          <span className="pinned-icon">📌</span>
+          <span className="pinned-text">
+            {pinnedMessage.type === 'text' ? pinnedMessage.text : `📎 ${pinnedMessage.type}`}
+          </span>
+          <button
+            className="pinned-close"
+            onClick={(e) => { e.stopPropagation(); unpinMessage(conversationId).catch(() => {}) }}
+          >✕</button>
+        </div>
+      )}
 
       {/* Messages */}
       <div ref={messagesContainerRef} className="messages-container">
@@ -382,7 +480,8 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
             {group.messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`msg-bubble-wrap ${msg.senderId === user.uid ? 'mine' : 'theirs'}`}
+                id={`msg-${msg.messageId || msg.id}`}
+                className={`msg-bubble-wrap ${msg.senderId === user.uid ? 'mine' : 'theirs'} ${highlightedMsgId === (msg.messageId || msg.id) ? 'highlighted' : ''}`}
                 onContextMenu={(e) => { e.preventDefault(); handleLongPress(msg) }}
               >
                 {msg.replyTo && (
@@ -476,6 +575,12 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
         <FormattingToolbar onFormat={handleFormat} />
       )}
 
+      {isBlocked ? (
+        <div className="blocked-banner">
+          <p>🚫 You've blocked {otherUser.username}. Unblock them to send messages.</p>
+          <button onClick={handleToggleBlock}>Unblock</button>
+        </div>
+      ) : (
       <form className="msg-input-bar" onSubmit={handleSendText}>
         <div className="media-menu-wrap">
           <button type="button" className="media-menu-btn" onClick={(e) => { e.stopPropagation(); setShowMediaMenu(v => !v); setShowEmoji(false) }} />
@@ -500,6 +605,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
         <textarea ref={textareaRef} className="msg-input" value={text} onChange={handleTyping} onKeyDown={handleKeyDown} onSelect={handleTextSelect} placeholder={`Message ${otherUser.username}…`} rows={1} maxLength={2000} spellCheck="true" lang="en" />
         <button type="submit" className={`send-btn ${text.trim() ? 'active' : ''}`} disabled={!text.trim() || sending} />
       </form>
+      )}
     </div>
   )
 }

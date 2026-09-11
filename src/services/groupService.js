@@ -76,6 +76,20 @@ export const sendGroupStickerMessage = async (groupId, senderId, senderName, sti
   return sendGroupMessage(groupId, senderId, senderName, null, 'sticker', null, stickerId, disappearingDuration)
 }
 
+export const setGroupTypingStatus = async (groupId, userId, isTyping) => {
+  await updateDoc(doc(db, 'groups', groupId), {
+    [`typing.${userId}`]: isTyping,
+  })
+}
+
+export const subscribeToGroupTyping = (groupId, callback) => {
+  return onSnapshot(doc(db, 'groups', groupId), (snap) => {
+    if (snap.exists()) {
+      callback(snap.data().typing || {})
+    }
+  })
+}
+
 export const markGroupAsRead = async (groupId, userId) => {
   await updateDoc(doc(db, 'groups', groupId), { [`unreadCount.${userId}`]: 0 })
 }

@@ -38,6 +38,21 @@ export const logCallMessage = async (conversationId, callerId, receiverId, callT
   })
 }
 
+export const pinMessage = async (conversationId, message) => {
+  await updateDoc(doc(db, 'conversations', conversationId), {
+    pinnedMessage: {
+      messageId: message.messageId || message.id,
+      text: message.text,
+      type: message.type,
+      senderId: message.senderId,
+    },
+  })
+}
+
+export const unpinMessage = async (conversationId) => {
+  await updateDoc(doc(db, 'conversations', conversationId), { pinnedMessage: null })
+}
+
 export const archiveConversation = async (conversationId, userId) => {
   await updateDoc(doc(db, 'conversations', conversationId), { archivedFor: arrayUnion(userId) })
 }

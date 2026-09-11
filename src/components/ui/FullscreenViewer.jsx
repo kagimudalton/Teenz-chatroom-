@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 const FullscreenViewer = ({ mediaURL, mediaType, onClose }) => {
   const [zoomed, setZoomed] = useState(false)
@@ -24,7 +25,7 @@ const FullscreenViewer = ({ mediaURL, mediaType, onClose }) => {
     lastTapRef.current = now
   }
 
-  return (
+  const content = (
     <div className="fullscreen-viewer" onClick={onClose}>
       <button className="fullscreen-close-btn" onClick={onClose}>✕</button>
       {mediaType === 'video' ? (
@@ -49,6 +50,13 @@ const FullscreenViewer = ({ mediaURL, mediaType, onClose }) => {
       )}
     </div>
   )
+
+  // Rendered via portal directly on document.body — this guarantees it always
+  // covers the true viewport, even when triggered from inside an ancestor that
+  // has transform/filter/backdrop-filter applied (which would otherwise trap
+  // any position:fixed descendant inside that ancestor's box instead of the
+  // real screen — the cause of the "tiny image in the corner" bug).
+  return createPortal(content, document.body)
 }
 
 export default FullscreenViewer

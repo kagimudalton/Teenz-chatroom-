@@ -2133,6 +2133,151 @@ img[referrerpolicy="no-referrer"] {
   text-align: right;
 }
 
+/* ─── MESSAGE SEARCH ─── */
+.msg-search-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.msg-search-input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: var(--radius-full);
+  background: rgba(255,255,255,0.08);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.msg-search-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.msg-search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  background: rgba(20,16,50,0.98);
+  border: 1px solid var(--border);
+  border-top: none;
+  z-index: 60;
+}
+
+.msg-search-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.msg-search-result-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 16px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.msg-search-result-item:hover {
+  background: var(--surface-hover);
+}
+.msg-search-result-sender {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent-cyan);
+}
+.msg-search-result-text {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── PINNED MESSAGE BANNER ─── */
+.pinned-message-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: rgba(108,77,255,0.12);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.pinned-icon {
+  flex-shrink: 0;
+}
+.pinned-text {
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pinned-close {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* ─── MESSAGE HIGHLIGHT (search jump / pin jump) ─── */
+@keyframes msg-highlight-flash {
+  0%, 100% { background: transparent; }
+  30% { background: rgba(0,229,255,0.25); }
+}
+.msg-bubble-wrap.highlighted .msg-bubble {
+  animation: msg-highlight-flash 1.8s ease;
+  border-radius: var(--radius-lg);
+}
+
+/* ─── BLOCKED BANNER ─── */
+.blocked-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  text-align: center;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+.blocked-banner p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.blocked-banner button {
+  padding: 8px 20px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+/* ─── FORGOT PASSWORD LINK ─── */
+.forgot-password-link {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.82rem;
+  color: var(--accent-cyan);
+  text-align: right;
+}
+
 /* ─── REPORT REASON PICKER ─── */
 .report-reason-overlay {
   position: fixed;

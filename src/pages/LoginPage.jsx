@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { signInWithEmail, signInWithGoogle } from '../services/authService.js'
+import { signInWithEmail, signInWithGoogle, resetPassword } from '../services/authService.js'
 import toast from 'react-hot-toast'
 
 const LoginPage = () => {
@@ -12,6 +12,10 @@ const LoginPage = () => {
   const [rememberMe, setRememberMe] = useState(true)
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [showResetModal, setShowResetModal] = useState(false)
+  const [resetEmail, setResetEmail] = useState('')
+  const [resetSending, setResetSending] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
 
   const handleChange = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }))
 
@@ -25,6 +29,21 @@ const LoginPage = () => {
       toast.error(err.message || 'Sign in failed')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSendReset = async (e) => {
+    e.preventDefault()
+    if (!resetEmail.trim()) return
+    setResetSending(true)
+    try {
+      await resetPassword(resetEmail.trim())
+      setResetSent(true)
+      toast.success('Password reset email sent!')
+    } catch (err) {
+      toast.error(err.message || 'Failed to send reset email.')
+    } finally {
+      setResetSending(false)
     }
   }
 
@@ -63,6 +82,9 @@ const LoginPage = () => {
               <input name="password" type={showPassword ? 'text' : 'password'} value={form.password} onChange={handleChange} placeholder="••••••••" required />
               <button type="button" className="password-toggle" onClick={() => setShowPassword(v => !v)}>{showPassword ? '🙈' : '👁️'}</button>
             </div>
+            <button type="button" className="forgot-password-link" onClick={() => { setShowResetModal(true); setResetEmail(form.email); setResetSent(false) }}>
+              Forgot password?
+            </button>
           </div>
           <div className="form-checkboxes">
             <label className="checkbox-label">
@@ -80,6 +102,41 @@ const LoginPage = () => {
         </form>
         <p className="auth-switch">No account? <Link to="/signup">Create one free</Link></p>
       </div>
+
+      {showResetModal && (
+        <div className="lock-screen" onClick={() => setShowResetModal(false)}>
+          <div className="lock-screen-card" onClick={e => e.stopPropagation()}>
+            {resetSent ? (
+              <>
+                <div className="lock-screen-icon">📩</div>
+                <h2>Check your email</h2>
+                <p>We sent a password reset link to {resetEmail}. Follow it to set a new password.</p>
+                <button className="lock-unlock-btn" onClick={() => setShowResetModal(false)}>Done</button>
+              </>
+            ) : (
+              <>
+                <div className="lock-screen-icon">🔑</div>
+                <h2>Reset your password</h2>
+                <p>Enter the email on your account and we'll send you a reset link.</p>
+                <form onSubmit={handleSendReset}>
+                  <input
+                    type="email"
+                    className="lock-pin-input"
+                    style={{ letterSpacing: 'normal', fontSize: '1rem', textAlign: 'left' }}
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    autoFocus
+                  />
+                  <button type="submit" className="lock-unlock-btn" disabled={!resetEmail.trim() || resetSending}>
+                    {resetSending ? 'Sending…' : 'Send reset link'}
+                  </button>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

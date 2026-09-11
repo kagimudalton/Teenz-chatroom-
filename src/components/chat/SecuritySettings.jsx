@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../../features/auth/AuthContext.jsx'
 import { setAppLockPin, disableAppLock, setAppLockEnabled } from '../../services/lockService.js'
+import { getBlockedUsers, unblockUser } from '../../services/userService.js'
+import UserAvatar from '../ui/UserAvatar.jsx'
 import toast from 'react-hot-toast'
 
 const SecuritySettings = () => {
@@ -9,6 +11,24 @@ const SecuritySettings = () => {
   const [pin, setPin] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
   const [saving, setSaving] = useState(false)
+  const [blockedList, setBlockedList] = useState([])
+  const [loadingBlocked, setLoadingBlocked] = useState(true)
+
+  useEffect(() => {
+    if (!user) return
+    getBlockedUsers(user.uid).then(setBlockedList).finally(() => setLoadingBlocked(false))
+  }, [user, userProfile?.blockedUsers])
+
+  const handleUnblock = async (blockedUid) => {
+    try {
+      await unblockUser(user.uid, blockedUid)
+      await refreshProfile()
+      setBlockedList(prev => prev.filter(b => b.uid !== blockedUid))
+      toast.success('Unblocked')
+    } catch {
+      toast.error('Failed to unblock')
+    }
+  }
 
   const security = userProfile?.security || {}
   const hasPinSet = !!security.pinHash
@@ -116,6 +136,27 @@ const SecuritySettings = () => {
       <p className="security-hint">
         You can also lock individual chats from that chat's menu, once a PIN is set.
       </p>
+
+      <h3 style={{ marginTop: 24 }}>Blocked users</h3>
+      {loadingBlocked ? (
+        <p className="account-switcher-email">Loading…</p>
+      ) : blockedList.length === 0 ? (
+        <p className="account-switcher-email">You haven't blocked anyone.</p>
+      ) : (
+        <div className="account-switcher-list">
+          {blockedList.map(blocked => (
+            <div key={blocked.uid} className="account-switcher-item" style={{ cursor: 'default' }}>
+              <UserAvatar user={blocked} size={42} />
+              <div className="account-switcher-info">
+                <span className="account-switcher-name">{blocked.username}</span>
+              </div>
+              <button className="account-switcher-remove" onClick={() => handleUnblock(blocked.uid)} title="Unblock" style={{ width: 'auto', borderRadius: 8, padding: '0 10px', fontSize: '0.78rem' }}>
+                Unblock
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

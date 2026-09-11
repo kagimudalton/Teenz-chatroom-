@@ -410,6 +410,8 @@ const ChatPage = () => {
               conversationId={liveActiveChatData.id}
               otherUser={liveActiveChatData.otherUser}
               disappearingDuration={liveActiveChatData.disappearingDuration}
+              isBlocked={userProfile?.blockedUsers?.includes(liveActiveChatData.otherUser?.uid)}
+              pinnedMessage={liveActiveChatData.pinnedMessage}
               isLocked={userProfile?.security?.lockedChatIds?.includes(liveActiveChatData.id)}
               hasPinSet={!!userProfile?.security?.pinHash}
               onToggleLock={async () => {
