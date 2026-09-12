@@ -75,6 +75,23 @@ export const signOutUser = async () => {
   await signOut(auth)
 }
 
+export const getFriendlyAuthError = (err) => {
+  const code = err?.code || ''
+  const map = {
+    'auth/wrong-password': 'That password doesn\'t match. Try again or reset it.',
+    'auth/user-not-found': 'No account found with that email.',
+    'auth/invalid-credential': 'Incorrect email or password.',
+    'auth/invalid-email': 'That doesn\'t look like a valid email address.',
+    'auth/email-already-in-use': 'An account already exists with that email.',
+    'auth/weak-password': 'Please use a stronger password (at least 6 characters).',
+    'auth/too-many-requests': 'Too many attempts. Please wait a moment and try again.',
+    'auth/network-request-failed': 'Network error — check your connection and try again.',
+    'auth/popup-closed-by-user': 'Sign-in was cancelled.',
+    'auth/user-disabled': 'This account has been disabled.',
+  }
+  return map[code] || err?.message || 'Something went wrong. Please try again.'
+}
+
 export const resetPassword = async (email) => sendPasswordResetEmail(auth, email)
 export const subscribeToAuthChanges = (callback) => onAuthStateChanged(auth, callback)
 export const getUserDocument = async (uid) => {

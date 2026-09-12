@@ -24,12 +24,29 @@ const App = () => {
         <Toaster
           position="top-center"
           toastOptions={{
+            duration: 3500,
             style: {
               background: 'rgba(20, 16, 50, 0.97)',
               color: '#F0EEFF',
               border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '12px',
+              borderRadius: '14px',
               fontSize: '0.9rem',
+              padding: '12px 16px',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+            },
+            success: {
+              iconTheme: { primary: '#00E5FF', secondary: '#0F0C29' },
+              style: {
+                border: '1px solid rgba(0,229,255,0.35)',
+                background: 'linear-gradient(135deg, rgba(20,16,50,0.97), rgba(0,60,70,0.5))',
+              },
+            },
+            error: {
+              iconTheme: { primary: '#FF6B6B', secondary: '#0F0C29' },
+              style: {
+                border: '1px solid rgba(255,107,107,0.4)',
+                background: 'linear-gradient(135deg, rgba(20,16,50,0.97), rgba(60,20,20,0.5))',
+              },
             },
           }}
         />

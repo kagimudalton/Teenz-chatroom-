@@ -7,6 +7,7 @@ import { formatTime, isEmojiOnly } from '../../utils/helpers.js'
 import UserAvatar from '../ui/UserAvatar.jsx'
 import FullscreenViewer from '../ui/FullscreenViewer.jsx'
 import EmojiPicker from './EmojiPicker.jsx'
+import GroupInfoModal from './GroupInfoModal.jsx'
 import StickerPicker, { getStickerById } from './StickerPicker.jsx'
 import FormattingToolbar from './FormattingToolbar.jsx'
 import FormattedText from './FormattedText.jsx'
@@ -28,6 +29,7 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat, isLocked, hasPin
   const [showMediaMenu, setShowMediaMenu] = useState(false)
   const [showStickers, setShowStickers] = useState(false)
   const [showDisappearingMenu, setShowDisappearingMenu] = useState(false)
+  const [showGroupInfo, setShowGroupInfo] = useState(false)
   const [showRecorder, setShowRecorder] = useState(false)
   const [fullscreenMedia, setFullscreenMedia] = useState(null)
   const bottomRef = useRef(null)
@@ -177,6 +179,15 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat, isLocked, hasPin
 
   return (
     <div className="message-area" onClick={() => { setShowEmoji(false); setShowMenu(false); setShowMediaMenu(false); setShowStickers(false); setShowDisappearingMenu(false) }}>
+      {showGroupInfo && (
+        <GroupInfoModal
+          group={group}
+          currentUserId={user.uid}
+          onClose={() => setShowGroupInfo(false)}
+          onLeft={onExitChat}
+        />
+      )}
+
       {fullscreenMedia && (
         <FullscreenViewer mediaURL={fullscreenMedia.url} mediaType={fullscreenMedia.type} onClose={() => setFullscreenMedia(null)} />
       )}
@@ -211,6 +222,7 @@ const GroupMessageArea = ({ group, onBackToSidebar, onExitChat, isLocked, hasPin
             <button onClick={() => { setShowDisappearingMenu(true); setShowMenu(false) }}>
               ⏱️ Disappearing messages {group.disappearingDuration ? '(on)' : '(off)'}
             </button>
+            <button onClick={() => { setShowGroupInfo(true); setShowMenu(false) }}>ℹ️ Group info</button>
             <button onClick={handleLeave}>🚪 Leave Group</button>
           </div>
         )}

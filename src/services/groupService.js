@@ -144,7 +144,40 @@ export const addGroupMember = async (groupId, userId) => {
   })
 }
 
+export const removeGroupMember = async (groupId, userId) => {
+  await updateDoc(doc(db, 'groups', groupId), {
+    members: arrayRemove(userId),
+    admins: arrayRemove(userId),
+  })
+}
+
+export const promoteToAdmin = async (groupId, userId) => {
+  await updateDoc(doc(db, 'groups', groupId), {
+    admins: arrayUnion(userId),
+  })
+}
+
+export const demoteFromAdmin = async (groupId, userId) => {
+  await updateDoc(doc(db, 'groups', groupId), {
+    admins: arrayRemove(userId),
+  })
+}
+
 export const getGroupInfo = async (groupId) => {
   const snap = await getDoc(doc(db, 'groups', groupId))
   return snap.exists() ? { ...snap.data(), id: snap.id } : null
+}
+
+export const getMemberProfiles = async (memberIds) => {
+  const profiles = await Promise.all(memberIds.map(async (uid) => {
+    const snap = await getDoc(doc(db, 'users', uid))
+    return snap.exists() ? { ...snap.data(), uid } : { uid, username: 'Unknown' }
+  }))
+  return profiles
+}
+
+export const forwardToGroup = async (groupId, senderId, senderName, originalMsg) => {
+  const text = originalMsg.type === 'text' ? originalMsg.text : null
+  const mediaURL = originalMsg.mediaURL || null
+  return sendGroupMessage(groupId, senderId, senderName, text, originalMsg.type, mediaURL)
 }

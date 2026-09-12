@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { signInWithEmail, signInWithGoogle, resetPassword } from '../services/authService.js'
+import { signInWithEmail, signInWithGoogle, resetPassword, getFriendlyAuthError } from '../services/authService.js'
 import toast from 'react-hot-toast'
 
 const LoginPage = () => {
@@ -26,7 +26,7 @@ const LoginPage = () => {
       await signInWithEmail({ email: form.email, password: form.password, rememberMe })
       navigate(from, { replace: true })
     } catch (err) {
-      toast.error(err.message || 'Sign in failed')
+      toast.error(getFriendlyAuthError(err))
     } finally {
       setLoading(false)
     }
@@ -41,7 +41,7 @@ const LoginPage = () => {
       setResetSent(true)
       toast.success('Password reset email sent!')
     } catch (err) {
-      toast.error(err.message || 'Failed to send reset email.')
+      toast.error(getFriendlyAuthError(err))
     } finally {
       setResetSending(false)
     }
@@ -54,7 +54,7 @@ const LoginPage = () => {
       await signInWithGoogle({ ageVerified, rememberMe })
       navigate(from, { replace: true })
     } catch (err) {
-      toast.error(err.message || 'Google sign-in failed')
+      toast.error(getFriendlyAuthError(err))
     } finally {
       setLoading(false)
     }

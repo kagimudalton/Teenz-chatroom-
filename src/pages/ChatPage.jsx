@@ -25,6 +25,7 @@ import { archiveGroup, unarchiveGroup } from '../services/groupService.js'
 import { isUnlockedThisSession, markUnlockedThisSession, verifyPin, lockChat, unlockChat } from '../services/lockService.js'
 import LockScreen from '../components/auth/LockScreen.jsx'
 import FullscreenViewer from '../components/ui/FullscreenViewer.jsx'
+import InstallAppButton from '../components/ui/InstallAppButton.jsx'
 import { getActiveHoliday, isHolidayThemeEnabled, setHolidayThemeEnabled } from '../services/holidayService.js'
 import HolidayOverlay from '../components/ui/HolidayOverlay.jsx'
 
@@ -292,6 +293,7 @@ const ChatPage = () => {
             <div onClick={() => setShowProfile(true)} style={{ cursor: 'pointer' }}>
               <UserAvatar user={userProfile} size={34} />
             </div>
+            <InstallAppButton />
             <button className="theme-toggle-btn" onClick={() => setShowThemePicker(true)}>🎨</button>
             {activeHoliday && (
               <button

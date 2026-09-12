@@ -2,6 +2,20 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
 
+// Capture the browser's install prompt event as soon as it fires, so a manual
+// "Install app" button anywhere in the UI can trigger it later — the browser
+// only fires this once and only if we listen from the very start.
+window.deferredInstallPrompt = null
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault()
+  window.deferredInstallPrompt = e
+  window.dispatchEvent(new Event('pwa-installable'))
+})
+window.addEventListener('appinstalled', () => {
+  window.deferredInstallPrompt = null
+  window.dispatchEvent(new Event('pwa-installed'))
+})
+
 // Register service worker for PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {

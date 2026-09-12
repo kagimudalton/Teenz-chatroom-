@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { signUpWithEmail, signInWithGoogle } from '../services/authService.js'
+import { signUpWithEmail, signInWithGoogle, getFriendlyAuthError } from '../services/authService.js'
 import { isValidEmail, isValidUsername } from '../utils/helpers.js'
 import toast from 'react-hot-toast'
 
@@ -42,7 +42,7 @@ const SignupPage = () => {
       toast.success('Welcome to Teenz Chat! 🎉')
       navigate('/chat')
     } catch (err) {
-      toast.error(err.message || 'Signup failed')
+      toast.error(getFriendlyAuthError(err))
     } finally {
       setLoading(false)
     }
