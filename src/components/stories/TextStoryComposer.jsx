@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { postTextStory } from '../../services/storiesService.js'
+import { postTextStory, uploadMusicForStory } from '../../services/storiesService.js'
 import toast from 'react-hot-toast'
 
 export const STORY_BACKGROUNDS = [
@@ -15,12 +15,20 @@ const TextStoryComposer = ({ userId, onClose, onPosted }) => {
   const [text, setText] = useState('')
   const [background, setBackground] = useState(STORY_BACKGROUNDS[0])
   const [posting, setPosting] = useState(false)
+  const [musicFile, setMusicFile] = useState(null)
+  const [uploadingMusic, setUploadingMusic] = useState(false)
 
   const handlePost = async () => {
     if (!text.trim()) return
     setPosting(true)
     try {
-      await postTextStory(userId, text, background.key)
+      let musicURL = null
+      if (musicFile) {
+        setUploadingMusic(true)
+        musicURL = await uploadMusicForStory(musicFile)
+        setUploadingMusic(false)
+      }
+      await postTextStory(userId, text, background.key, musicURL)
       toast.success('Status posted! 🔥')
       onPosted()
     } catch (err) {
@@ -56,8 +64,25 @@ const TextStoryComposer = ({ userId, onClose, onPosted }) => {
         ))}
       </div>
 
+      <label className="story-music-picker">
+        <input
+          type="file"
+          accept="audio/*"
+          style={{ display: 'none' }}
+          onChange={(e) => setMusicFile(e.target.files[0] || null)}
+        />
+        🎵 {musicFile ? musicFile.name : 'Add a song (optional)'}
+        {musicFile && (
+          <button
+            type="button"
+            className="story-music-remove"
+            onClick={(e) => { e.preventDefault(); setMusicFile(null) }}
+          >✕</button>
+        )}
+      </label>
+
       <button className="text-story-post-btn" onClick={handlePost} disabled={!text.trim() || posting}>
-        {posting ? 'Posting…' : 'Post status'}
+        {uploadingMusic ? 'Uploading song…' : posting ? 'Posting…' : 'Post status'}
       </button>
     </div>
   )

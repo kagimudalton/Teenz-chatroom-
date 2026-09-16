@@ -5,7 +5,7 @@ const CallModal = ({ callHook, otherUser, onClose }) => {
   const {
     callState, callType,
     isMuted, isCameraOff, isScreenSharing,
-    localVideoRef, remoteVideoRef,
+    localVideoRef, remoteVideoRef, remoteStreamRef,
     callDuration, formatDuration,
     toggleMute, toggleCamera, toggleScreenShare, hangUp,
   } = callHook
@@ -18,14 +18,21 @@ const CallModal = ({ callHook, otherUser, onClose }) => {
     }
   }, [callState])
 
-  // Ensure remote audio plays
+  // Re-attach the remote stream whenever the DOM structure changes (e.g. the
+  // video element only exists once callState becomes 'active'). Effects run
+  // after React commits the DOM, so this guarantees the element actually
+  // exists by the time we try to attach — fixes the race where the stream
+  // arrived and tried to attach in the same tick the element was created.
   useEffect(() => {
-    if (remoteVideoRef.current) {
-      remoteVideoRef.current.muted = false
-      remoteVideoRef.current.volume = 1.0
-      remoteVideoRef.current.play?.().catch(console.warn)
+    const el = remoteVideoRef.current
+    const stream = remoteStreamRef?.current
+    if (el && stream) {
+      el.srcObject = stream
+      el.muted = false
+      el.volume = 1.0
+      el.play?.().catch(console.warn)
     }
-  }, [callState])
+  }, [callState, callType])
 
   const stateLabel = {
     calling: 'Calling…',

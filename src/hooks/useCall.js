@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { initiateCall, answerCall, rejectCall, endCall, getLocalStream, addStreamToPeerConnection, subscribeToIncomingCalls } from '../services/callService.js'
+import { initiateCall, answerCall, rejectCall, endCall, getLocalStream, subscribeToIncomingCalls } from '../services/callService.js'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { db } from '../services/firebase.js'
 import { logCallMessage } from '../services/chatService.js'
@@ -85,12 +85,10 @@ export const useCall = () => {
       stream.getTracks().forEach(t => { t.enabled = true })
       attachStream(localVideoRef, stream)
 
-      const { callId, peerConnection, cleanup } = await initiateCall(user.uid, partnerId, type)
+      const { callId, peerConnection, cleanup } = await initiateCall(user.uid, partnerId, type, stream)
       callIdRef.current = callId
       peerConnectionRef.current = peerConnection
       cleanupRef.current = cleanup
-
-      addStreamToPeerConnection(peerConnection, stream)
 
       peerConnection.ontrack = (event) => {
         console.log('Got remote track:', event.track.kind)
@@ -143,13 +141,11 @@ export const useCall = () => {
       stream.getTracks().forEach(t => { t.enabled = true })
       attachStream(localVideoRef, stream)
 
-      const { peerConnection, callData, cleanup } = await answerCall(callId)
+      const { peerConnection, callData, cleanup } = await answerCall(callId, stream)
       callIdRef.current = callId
       peerConnectionRef.current = peerConnection
       cleanupRef.current = cleanup
       setCallPartner({ uid: callData.callerId })
-
-      addStreamToPeerConnection(peerConnection, stream)
 
       peerConnection.ontrack = (event) => {
         console.log('Got remote track (receiver):', event.track.kind)
@@ -287,7 +283,7 @@ export const useCall = () => {
   return {
     callState, callType, callPartner, incomingCall,
     isMuted, isCameraOff, isScreenSharing, error,
-    localVideoRef, remoteVideoRef,
+    localVideoRef, remoteVideoRef, remoteStreamRef,
     callDuration, formatDuration,
     startCall, acceptCall, rejectIncomingCall, hangUp,
     toggleMute, toggleCamera, toggleScreenShare,

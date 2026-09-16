@@ -4,7 +4,7 @@ const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent)
 const isStandalone = () =>
   window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
 
-const InstallAppButton = () => {
+const InstallAppButton = ({ variant = 'compact' }) => {
   const [canInstall, setCanInstall] = useState(!!window.deferredInstallPrompt)
   const [installed, setInstalled] = useState(isStandalone())
   const [showIOSHelp, setShowIOSHelp] = useState(false)
@@ -42,7 +42,7 @@ const InstallAppButton = () => {
 
   return (
     <>
-      <button className="install-app-btn" onClick={handleClick} title="Install app">
+      <button className={`install-app-btn ${variant === 'settings' ? 'install-app-btn-settings' : ''}`} onClick={handleClick} title="Install app">
         📲 Install app
       </button>
 

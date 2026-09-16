@@ -25,7 +25,6 @@ import { archiveGroup, unarchiveGroup } from '../services/groupService.js'
 import { isUnlockedThisSession, markUnlockedThisSession, verifyPin, lockChat, unlockChat } from '../services/lockService.js'
 import LockScreen from '../components/auth/LockScreen.jsx'
 import FullscreenViewer from '../components/ui/FullscreenViewer.jsx'
-import InstallAppButton from '../components/ui/InstallAppButton.jsx'
 import { getActiveHoliday, isHolidayThemeEnabled, setHolidayThemeEnabled } from '../services/holidayService.js'
 import HolidayOverlay from '../components/ui/HolidayOverlay.jsx'
 
@@ -78,7 +77,8 @@ const ChatPage = () => {
       const newTime = conv.lastMessageAt?.toMillis?.() || 0
       const isFromOther = conv.lastMessage && conv.lastMessage.senderId !== user?.uid
       const isCurrentlyOpen = activeChatRef.current?.type === 'dm' && activeChatRef.current?.data?.id === conv.id
-      if (prevTime !== undefined && newTime > prevTime && isFromOther && (document.hidden || !isCurrentlyOpen)) {
+      const isMuted = conv.mutedFor?.[user?.uid]
+      if (prevTime !== undefined && newTime > prevTime && isFromOther && !isMuted && (document.hidden || !isCurrentlyOpen)) {
         showMessageNotification({
           title: conv.otherUser?.username || 'New message',
           body: conv.lastMessage.type === 'text' ? truncate(conv.lastMessage.text, 80) : `📎 ${conv.lastMessage.type}`,
@@ -99,7 +99,8 @@ const ChatPage = () => {
       const newTime = grp.lastMessageAt?.toMillis?.() || 0
       const isFromOther = grp.lastMessage && grp.lastMessage.senderId !== user?.uid
       const isCurrentlyOpen = activeChatRef.current?.type === 'group' && activeChatRef.current?.data?.id === grp.id
-      if (prevTime !== undefined && newTime > prevTime && isFromOther && (document.hidden || !isCurrentlyOpen)) {
+      const isMuted = grp.mutedFor?.[user?.uid]
+      if (prevTime !== undefined && newTime > prevTime && isFromOther && !isMuted && (document.hidden || !isCurrentlyOpen)) {
         showMessageNotification({
           title: grp.name || 'New group message',
           body: grp.lastMessage.type === 'text' ? truncate(grp.lastMessage.text, 80) : `📎 ${grp.lastMessage.type}`,
@@ -293,7 +294,6 @@ const ChatPage = () => {
             <div onClick={() => setShowProfile(true)} style={{ cursor: 'pointer' }}>
               <UserAvatar user={userProfile} size={34} />
             </div>
-            <InstallAppButton />
             <button className="theme-toggle-btn" onClick={() => setShowThemePicker(true)}>🎨</button>
             {activeHoliday && (
               <button
@@ -414,6 +414,7 @@ const ChatPage = () => {
               disappearingDuration={liveActiveChatData.disappearingDuration}
               isBlocked={userProfile?.blockedUsers?.includes(liveActiveChatData.otherUser?.uid)}
               pinnedMessage={liveActiveChatData.pinnedMessage}
+              isMuted={!!liveActiveChatData.mutedFor?.[user.uid]}
               isLocked={userProfile?.security?.lockedChatIds?.includes(liveActiveChatData.id)}
               hasPinSet={!!userProfile?.security?.pinHash}
               onToggleLock={async () => {

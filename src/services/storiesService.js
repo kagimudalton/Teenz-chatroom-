@@ -6,20 +6,26 @@ import { getContactIds } from './chatService.js'
 
 const STORY_DURATION_MS = 24 * 60 * 60 * 1000
 
-export const postTextStory = async (ownerId, text, background) => {
+export const postTextStory = async (ownerId, text, background, musicURL = null) => {
   if (!text.trim()) throw new Error('Status text cannot be empty.')
   const expiresAt = Timestamp.fromDate(new Date(Date.now() + STORY_DURATION_MS))
-  const storyRef = await addDoc(collection(db, 'stories'), { ownerId, mediaURL: null, type: 'text', text: text.trim(), background, caption: '', createdAt: serverTimestamp(), expiresAt, viewerCount: 0 })
+  const storyRef = await addDoc(collection(db, 'stories'), { ownerId, mediaURL: null, type: 'text', text: text.trim(), background, musicURL, caption: '', createdAt: serverTimestamp(), expiresAt, viewerCount: 0 })
   logEvent('story_uploaded', { type: 'text' })
   return { storyId: storyRef.id, expiresAt }
 }
 
-export const uploadStory = async (ownerId, file, type, caption = '') => {
+export const uploadStory = async (ownerId, file, type, caption = '', musicURL = null) => {
   const mediaURL = await uploadStoryMedia(file, type)
   const expiresAt = Timestamp.fromDate(new Date(Date.now() + STORY_DURATION_MS))
-  const storyRef = await addDoc(collection(db, 'stories'), { ownerId, mediaURL, type, caption, createdAt: serverTimestamp(), expiresAt, viewerCount: 0 })
+  const storyRef = await addDoc(collection(db, 'stories'), { ownerId, mediaURL, type, caption, musicURL, createdAt: serverTimestamp(), expiresAt, viewerCount: 0 })
   logEvent('story_uploaded', { type })
   return { storyId: storyRef.id, mediaURL, expiresAt }
+}
+
+export const uploadMusicForStory = async (file) => {
+  // Reuses the same media upload pipeline — Cloudinary accepts audio files
+  // under the 'video' resource type, same as voice notes elsewhere in the app.
+  return uploadStoryMedia(file, 'audio')
 }
 
 export const recordStoryView = async (storyId, viewerId) => {

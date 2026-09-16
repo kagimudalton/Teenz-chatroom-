@@ -8,6 +8,7 @@ import { auth } from '../services/firebase.js'
 import UserAvatar from '../components/ui/UserAvatar.jsx'
 import AccountSwitcher from '../components/chat/AccountSwitcher.jsx'
 import SecuritySettings from '../components/chat/SecuritySettings.jsx'
+import InstallAppButton from '../components/ui/InstallAppButton.jsx'
 import toast from 'react-hot-toast'
 
 const ProfilePage = ({ onClose }) => {
@@ -135,6 +136,12 @@ const ProfilePage = ({ onClose }) => {
 
           {/* Security */}
           <SecuritySettings />
+
+          {/* App */}
+          <div className="security-settings">
+            <h3>App</h3>
+            <InstallAppButton variant="settings" />
+          </div>
 
           {/* Save */}
           <button

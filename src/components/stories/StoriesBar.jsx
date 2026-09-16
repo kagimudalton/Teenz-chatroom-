@@ -5,6 +5,7 @@ import { uploadStory } from '../../services/storiesService.js'
 import { checkImageNSFW } from '../../services/moderationService.js'
 import StoryViewer from './StoryViewer.jsx'
 import TextStoryComposer from './TextStoryComposer.jsx'
+import AudioStoryComposer from './AudioStoryComposer.jsx'
 import UserAvatar from '../ui/UserAvatar.jsx'
 import toast from 'react-hot-toast'
 
@@ -15,6 +16,7 @@ const StoriesBar = () => {
   const [uploading, setUploading] = useState(false)
   const [showAddMenu, setShowAddMenu] = useState(false)
   const [showTextComposer, setShowTextComposer] = useState(false)
+  const [showAudioComposer, setShowAudioComposer] = useState(false)
 
   const handleAddStory = async (e) => {
     const file = e.target.files[0]
@@ -75,6 +77,9 @@ const StoriesBar = () => {
                 <button className="story-add-menu-item" onClick={() => { setShowAddMenu(false); setShowTextComposer(true) }}>
                   ✏️ Text status
                 </button>
+                <button className="story-add-menu-item" onClick={() => { setShowAddMenu(false); setShowAudioComposer(true) }}>
+                  🎤 Audio status
+                </button>
               </div>
             )}
           </div>
@@ -109,6 +114,14 @@ const StoriesBar = () => {
           userId={user.uid}
           onClose={() => setShowTextComposer(false)}
           onPosted={() => setShowTextComposer(false)}
+        />
+      )}
+
+      {showAudioComposer && (
+        <AudioStoryComposer
+          userId={user.uid}
+          onClose={() => setShowAudioComposer(false)}
+          onPosted={() => setShowAudioComposer(false)}
         />
       )}
     </>

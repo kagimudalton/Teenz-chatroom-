@@ -27,7 +27,7 @@ const StoryViewer = ({ storyGroup, currentUserId, onClose }) => {
     recordStoryView(currentStory.storyId, currentUserId).catch(() => {})
     setProgress(0)
 
-    if (currentStory.type === 'video') return
+    if (currentStory.type === 'video' || currentStory.type === 'audio') return
 
     const startTime = Date.now()
     progressRef.current = setInterval(() => {
@@ -136,6 +136,22 @@ const StoryViewer = ({ storyGroup, currentUserId, onClose }) => {
           >
             <p>{currentStory.text}</p>
           </div>
+        )}
+        {currentStory.type === 'audio' && (
+          <div className="story-audio-card">
+            <div className="story-audio-icon">🎤</div>
+            <p className="story-audio-label">Audio status</p>
+            <audio
+              ref={videoRef}
+              src={currentStory.mediaURL}
+              autoPlay
+              onEnded={goNext}
+              onTimeUpdate={handleVideoTimeUpdate}
+            />
+          </div>
+        )}
+        {currentStory.musicURL && currentStory.type !== 'audio' && (
+          <audio src={currentStory.musicURL} autoPlay loop style={{ display: 'none' }} />
         )}
         {currentStory.caption && <div className="story-caption">{currentStory.caption}</div>}
       </div>

@@ -11,7 +11,7 @@ const ICE_SERVERS = {
   ],
 }
 
-export const initiateCall = async (callerId, receiverId, type = 'video') => {
+export const initiateCall = async (callerId, receiverId, type = 'video', localStream) => {
   const callRef = doc(collection(db, 'calls'))
   const callId = callRef.id
   const peerConnection = new RTCPeerConnection(ICE_SERVERS)
@@ -31,6 +31,15 @@ export const initiateCall = async (callerId, receiverId, type = 'video') => {
 
   peerConnection.onicegatheringstatechange = () => {
     console.log('ICE gathering state:', peerConnection.iceGatheringState)
+  }
+
+  // CRITICAL: local tracks must be added BEFORE creating the offer, or the
+  // offer negotiates as receive-only — the caller's own mic/camera never
+  // gets sent, so the other person hears/sees nothing from this side.
+  if (localStream) {
+    localStream.getTracks().forEach((track) => {
+      peerConnection.addTrack(track, localStream)
+    })
   }
 
   const offerDescription = await peerConnection.createOffer({
@@ -70,7 +79,7 @@ export const initiateCall = async (callerId, receiverId, type = 'video') => {
   return { callId, peerConnection, cleanup: () => { unsubscribeAnswer(); unsubscribeReceiverCandidates() } }
 }
 
-export const answerCall = async (callId) => {
+export const answerCall = async (callId, localStream) => {
   const callRef = doc(db, 'calls', callId)
   const callSnap = await getDoc(callRef)
   if (!callSnap.exists()) throw new Error('Call not found.')
@@ -88,6 +97,16 @@ export const answerCall = async (callId) => {
 
   peerConnection.onconnectionstatechange = () => {
     console.log('Answer connection state:', peerConnection.connectionState)
+  }
+
+  // CRITICAL: local tracks must be added BEFORE creating the answer. The SDP
+  // answer is generated from whatever tracks exist on the peer connection at
+  // that moment — adding them afterward means the answer negotiates as
+  // receive-only (or broken) media, which is why nobody could hear anything.
+  if (localStream) {
+    localStream.getTracks().forEach((track) => {
+      peerConnection.addTrack(track, localStream)
+    })
   }
 
   await peerConnection.setRemoteDescription(new RTCSessionDescription(callData.offer))
