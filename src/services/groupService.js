@@ -94,6 +94,24 @@ export const markGroupAsRead = async (groupId, userId) => {
   await updateDoc(doc(db, 'groups', groupId), { [`unreadCount.${userId}`]: 0 })
 }
 
+export const setGroupMuted = async (groupId, userId, muted) => {
+  await updateDoc(doc(db, 'groups', groupId), {
+    [`mutedFor.${userId}`]: muted,
+  })
+}
+
+export const clearGroupChatHistory = async (groupId, userId) => {
+  const snap = await getDocs(collection(db, 'groups', groupId, 'messages'))
+  if (snap.empty) return
+  const docs = snap.docs
+  const CHUNK_SIZE = 400
+  for (let i = 0; i < docs.length; i += CHUNK_SIZE) {
+    const batch = writeBatch(db)
+    docs.slice(i, i + CHUNK_SIZE).forEach((d) => batch.update(d.ref, { deletedFor: arrayUnion(userId) }))
+    await batch.commit()
+  }
+}
+
 export const archiveGroup = async (groupId, userId) => {
   await updateDoc(doc(db, 'groups', groupId), { archivedFor: arrayUnion(userId) })
 }
@@ -106,7 +124,7 @@ export const setGroupDisappearingDuration = async (groupId, durationMs) => {
   await updateDoc(doc(db, 'groups', groupId), { disappearingDuration: durationMs })
 }
 
-export const subscribeToGroupMessages = (groupId, callback) => {
+export const subscribeToGroupMessages = (groupId, viewerId, callback) => {
   const q = query(
     collection(db, 'groups', groupId, 'messages'),
     orderBy('createdAt', 'asc')
@@ -116,6 +134,7 @@ export const subscribeToGroupMessages = (groupId, callback) => {
     const messages = snap.docs
       .map(d => ({ ...d.data(), id: d.id }))
       .filter((msg) => !msg.expiresAt || msg.expiresAt > now)
+      .filter((msg) => !(msg.deletedFor || []).includes(viewerId))
     callback(messages)
   })
 }

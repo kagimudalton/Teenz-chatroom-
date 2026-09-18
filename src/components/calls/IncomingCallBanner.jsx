@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { startRingtone, stopRingtone } from '../../services/ringtoneService.js'
 import UserAvatar from '../ui/UserAvatar.jsx'
+import { PhoneAcceptIcon, PhoneDeclineIcon } from './CallIcons.jsx'
 
 const IncomingCallBanner = ({ call, callerUser, onAccept, onReject }) => {
   const [visible, setVisible] = useState(false)
@@ -52,11 +53,11 @@ const IncomingCallBanner = ({ call, callerUser, onAccept, onReject }) => {
       </div>
       <div className="incoming-call-actions">
         <div className="incoming-call-action-group">
-          <button className="reject-call-btn" onClick={handleReject} title="Decline">✕</button>
+          <button className="reject-call-btn" onClick={handleReject} title="Decline"><PhoneDeclineIcon /></button>
           <span className="incoming-call-action-label">Decline</span>
         </div>
         <div className="incoming-call-action-group">
-          <button className="accept-call-btn" onClick={handleAccept} title="Accept">✓</button>
+          <button className="accept-call-btn" onClick={handleAccept} title="Accept"><PhoneAcceptIcon /></button>
           <span className="incoming-call-action-label">Accept</span>
         </div>
       </div>

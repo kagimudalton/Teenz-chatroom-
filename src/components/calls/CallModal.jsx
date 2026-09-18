@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import UserAvatar from '../ui/UserAvatar.jsx'
+import { MicIcon, MicOffIcon, VideoIcon, VideoOffIcon, ScreenShareIcon, PhoneHangupIcon } from './CallIcons.jsx'
 
 const CallModal = ({ callHook, otherUser, onClose }) => {
   const {
@@ -9,8 +10,6 @@ const CallModal = ({ callHook, otherUser, onClose }) => {
     callDuration, formatDuration,
     toggleMute, toggleCamera, toggleScreenShare, hangUp,
   } = callHook
-
-  const remoteAudioRef = useRef(null)
 
   useEffect(() => {
     if (callState === 'ended') {
@@ -98,23 +97,31 @@ const CallModal = ({ callHook, otherUser, onClose }) => {
       <div className="call-controls">
         <div className="call-controls-row">
           <div className="call-ctrl-group">
-            <button className={`call-ctrl-btn ${isMuted ? 'active-ctrl' : ''}`} onClick={toggleMute} />
+            <button className={`call-ctrl-btn ${isMuted ? 'active-ctrl' : ''}`} onClick={toggleMute}>
+              {isMuted ? <MicOffIcon /> : <MicIcon />}
+            </button>
             <span className="call-ctrl-label">{isMuted ? 'Unmute' : 'Mute'}</span>
           </div>
           {callType === 'video' && (
             <div className="call-ctrl-group">
-              <button className={`call-ctrl-btn ${isCameraOff ? 'active-ctrl' : ''}`} onClick={toggleCamera} />
+              <button className={`call-ctrl-btn ${isCameraOff ? 'active-ctrl' : ''}`} onClick={toggleCamera}>
+                {isCameraOff ? <VideoOffIcon /> : <VideoIcon />}
+              </button>
               <span className="call-ctrl-label">{isCameraOff ? 'Show cam' : 'Hide cam'}</span>
             </div>
           )}
           {callType === 'video' && callState === 'active' && (
             <div className="call-ctrl-group">
-              <button className={`call-ctrl-btn screen-share-btn ${isScreenSharing ? 'active-ctrl' : ''}`} onClick={toggleScreenShare}>🖥️</button>
+              <button className={`call-ctrl-btn screen-share-btn ${isScreenSharing ? 'active-ctrl' : ''}`} onClick={toggleScreenShare}>
+                <ScreenShareIcon />
+              </button>
               <span className="call-ctrl-label">{isScreenSharing ? 'Stop share' : 'Share screen'}</span>
             </div>
           )}
           <div className="call-ctrl-group">
-            <button className="call-ctrl-btn hang-up" onClick={() => { hangUp(); onClose() }} />
+            <button className="call-ctrl-btn hang-up" onClick={() => { hangUp(); onClose() }}>
+              <PhoneHangupIcon />
+            </button>
             <span className="call-ctrl-label">End</span>
           </div>
         </div>

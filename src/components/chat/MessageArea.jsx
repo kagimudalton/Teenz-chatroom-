@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useMessages } from '../../hooks/useMessages.js'
 import { useAuth } from '../../features/auth/AuthContext.jsx'
 import { useWallpaper } from '../../hooks/useWallpaper.js'
-import { sendTextMessage, sendMediaMessage, sendStickerMessage, editMessage, EDIT_WINDOW_MS, setTypingStatus, subscribeToTyping, setDisappearingDuration, deleteMessageForUser, deleteMessageForEveryone, pinMessage, unpinMessage } from '../../services/chatService.js'
+import { sendTextMessage, sendMediaMessage, sendStickerMessage, editMessage, EDIT_WINDOW_MS, setTypingStatus, subscribeToTyping, setDisappearingDuration, deleteMessageForUser, deleteMessageForEveryone, pinMessage, unpinMessage, setConversationMuted, clearChatHistory } from '../../services/chatService.js'
 import { checkImageNSFW } from '../../services/moderationService.js'
 import { subscribeToUserStatus, formatLastSeen, reportUser, blockUser, unblockUser } from '../../services/userService.js'
 import { formatTime, getStatusIcon, isEmojiOnly } from '../../utils/helpers.js'
@@ -21,7 +21,7 @@ import MessageReactions from './MessageReactions.jsx'
 import ForwardModal from './ForwardModal.jsx'
 import toast from 'react-hot-toast'
 
-const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, onExitChat, disappearingDuration, isLocked, hasPinSet, onToggleLock, isBlocked, pinnedMessage }) => {
+const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, onExitChat, disappearingDuration, isLocked, hasPinSet, onToggleLock, isBlocked, pinnedMessage, isMuted }) => {
   const { user, refreshProfile } = useAuth()
   const { messages, loading, bottomRef } = useMessages(conversationId)
   const { wallpaper, updateWallpaper } = useWallpaper()
@@ -253,6 +253,27 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
     setContextMenu(null)
   }
 
+  const handleToggleMute = async () => {
+    try {
+      await setConversationMuted(conversationId, user.uid, !isMuted)
+      toast.success(isMuted ? 'Notifications unmuted' : 'Chat muted')
+    } catch {
+      toast.error('Failed to update mute status')
+    }
+    setShowMenu(false)
+  }
+
+  const handleClearChat = async () => {
+    if (!window.confirm('Clear all messages in this chat? This only removes them from your view.')) return
+    try {
+      await clearChatHistory(conversationId, user.uid)
+      toast.success('Chat cleared')
+    } catch {
+      toast.error('Failed to clear chat')
+    }
+    setShowMenu(false)
+  }
+
   const handleTogglePin = async (msg) => {
     try {
       const isPinned = pinnedMessage?.messageId === (msg.messageId || msg.id)
@@ -386,7 +407,6 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
           </div>
         </div>
         <div className="msg-header-actions">
-          <button className="call-btn" onClick={(e) => { e.stopPropagation(); setShowSearch(v => !v); setSearchQuery('') }} title="Search">🔍</button>
           <button className="call-btn audio" onClick={() => onStartCall('audio')} title="Voice call" />
           <button className="call-btn video" onClick={() => onStartCall('video')} title="Video call" />
           <button className="call-btn" onClick={(e) => { e.stopPropagation(); setShowMenu(v => !v) }} title="More" />
@@ -396,6 +416,7 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
         </div>
         {showMenu && (
           <div className="header-dropdown" onClick={e => e.stopPropagation()}>
+            <button onClick={() => { setShowSearch(v => !v); setSearchQuery(''); setShowMenu(false) }}>🔍 Search in chat</button>
             <button onClick={() => { setShowWallpaper(true); setShowMenu(false) }}>🎨 Wallpaper</button>
             {hasPinSet && (
               <button onClick={() => { onToggleLock(); setShowMenu(false) }}>
@@ -405,6 +426,8 @@ const MessageArea = ({ conversationId, otherUser, onBackToSidebar, onStartCall, 
             <button onClick={() => { setShowDisappearingMenu(true); setShowMenu(false) }}>
               ⏱️ Disappearing messages {disappearingDuration ? '(on)' : '(off)'}
             </button>
+            <button onClick={handleToggleMute}>{isMuted ? '🔔 Unmute' : '🔕 Mute notifications'}</button>
+            <button onClick={handleClearChat}>🧹 Clear chat</button>
             <button onClick={handleReport}>🚩 Report</button>
             <button onClick={handleToggleBlock}>{isBlocked ? '✅ Unblock user' : '🚫 Block user'}</button>
           </div>

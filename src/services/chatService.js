@@ -53,6 +53,24 @@ export const unpinMessage = async (conversationId) => {
   await updateDoc(doc(db, 'conversations', conversationId), { pinnedMessage: null })
 }
 
+export const setConversationMuted = async (conversationId, userId, muted) => {
+  await updateDoc(doc(db, 'conversations', conversationId), {
+    [`mutedFor.${userId}`]: muted,
+  })
+}
+
+export const clearChatHistory = async (conversationId, userId) => {
+  const snap = await getDocs(collection(db, 'conversations', conversationId, 'messages'))
+  if (snap.empty) return
+  const docs = snap.docs
+  const CHUNK_SIZE = 400
+  for (let i = 0; i < docs.length; i += CHUNK_SIZE) {
+    const batch = writeBatch(db)
+    docs.slice(i, i + CHUNK_SIZE).forEach((d) => batch.update(d.ref, { deletedFor: arrayUnion(userId) }))
+    await batch.commit()
+  }
+}
+
 export const archiveConversation = async (conversationId, userId) => {
   await updateDoc(doc(db, 'conversations', conversationId), { archivedFor: arrayUnion(userId) })
 }

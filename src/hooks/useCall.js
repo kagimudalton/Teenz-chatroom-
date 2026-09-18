@@ -91,10 +91,17 @@ export const useCall = () => {
       cleanupRef.current = cleanup
 
       peerConnection.ontrack = (event) => {
-        console.log('Got remote track:', event.track.kind)
-        const remoteStream = event.streams[0] || new MediaStream([event.track])
-        remoteStreamRef.current = remoteStream
-        attachStream(remoteVideoRef, remoteStream)
+        console.log('Got remote track:', event.track.kind, 'streams:', event.streams.length)
+        if (event.streams[0]) {
+          remoteStreamRef.current = event.streams[0]
+        } else {
+          // Fallback: no stream grouping info from the browser — build/extend
+          // our own persistent stream so a second track (e.g. video arriving
+          // after audio) doesn't silently overwrite the first.
+          if (!remoteStreamRef.current) remoteStreamRef.current = new MediaStream()
+          remoteStreamRef.current.addTrack(event.track)
+        }
+        attachStream(remoteVideoRef, remoteStreamRef.current)
         setCallState('active')
         reachedActiveRef.current = true
         callStartTimeRef.current = Date.now()
@@ -107,17 +114,20 @@ export const useCall = () => {
         }
       }
 
-      // Watch the call doc so we know if the other side declines or doesn't answer in time
+      // Watch the call doc for the ENTIRE call lifecycle — covers the other
+      // side declining, not answering in time, or hanging up mid-call.
       callDocUnsubRef.current = onSnapshot(doc(db, 'calls', callId), (snap) => {
         const data = snap.data()
-        if (!data || loggedOutcomeRef.current) return
-        if (data.status === 'rejected' && !reachedActiveRef.current) {
+        if (!data) return
+        if (data.status === 'rejected' && !reachedActiveRef.current && !loggedOutcomeRef.current) {
           loggedOutcomeRef.current = true
           const outcome = data.reason === 'timeout' ? 'missed' : 'declined'
           const conversationId = generateConversationId(user.uid, partnerId)
           logCallMessage(conversationId, user.uid, partnerId, type, outcome).catch(console.error)
           setCallState('ended')
           setTimeout(() => setCallState('idle'), 2000)
+        } else if (data.status === 'ended' && reachedActiveRef.current) {
+          hangUp(true)
         }
       })
     } catch (err) {
@@ -148,10 +158,14 @@ export const useCall = () => {
       setCallPartner({ uid: callData.callerId })
 
       peerConnection.ontrack = (event) => {
-        console.log('Got remote track (receiver):', event.track.kind)
-        const remoteStream = event.streams[0] || new MediaStream([event.track])
-        remoteStreamRef.current = remoteStream
-        attachStream(remoteVideoRef, remoteStream)
+        console.log('Got remote track (receiver):', event.track.kind, 'streams:', event.streams.length)
+        if (event.streams[0]) {
+          remoteStreamRef.current = event.streams[0]
+        } else {
+          if (!remoteStreamRef.current) remoteStreamRef.current = new MediaStream()
+          remoteStreamRef.current.addTrack(event.track)
+        }
+        attachStream(remoteVideoRef, remoteStreamRef.current)
         setCallState('active')
         reachedActiveRef.current = true
       }
@@ -162,6 +176,15 @@ export const useCall = () => {
           hangUp()
         }
       }
+
+      // Watch the call doc so we know immediately if the caller hangs up,
+      // rather than waiting for slow ICE disconnect detection.
+      callDocUnsubRef.current = onSnapshot(doc(db, 'calls', callId), (snap) => {
+        const data = snap.data()
+        if (data?.status === 'ended') {
+          hangUp(true)
+        }
+      })
 
       setCallState('active')
       reachedActiveRef.current = true
@@ -226,7 +249,7 @@ export const useCall = () => {
     setIsScreenSharing(false)
   }, [])
 
-  const hangUp = useCallback(async () => {
+  const hangUp = useCallback(async (fromRemote = false) => {
     localStreamRef.current?.getTracks().forEach(t => t.stop())
     screenStreamRef.current?.getTracks().forEach(t => t.stop())
     screenStreamRef.current = null
@@ -234,7 +257,8 @@ export const useCall = () => {
     setIsScreenSharing(false)
     if (callDocUnsubRef.current) { callDocUnsubRef.current(); callDocUnsubRef.current = null }
     if (cleanupRef.current) cleanupRef.current()
-    if (callIdRef.current) await endCall(callIdRef.current, peerConnectionRef.current)
+    if (callIdRef.current && !fromRemote) await endCall(callIdRef.current, peerConnectionRef.current)
+    else if (peerConnectionRef.current) peerConnectionRef.current.close()
 
     if (isCallerRef.current && !loggedOutcomeRef.current && currentReceiverIdRef.current) {
       loggedOutcomeRef.current = true

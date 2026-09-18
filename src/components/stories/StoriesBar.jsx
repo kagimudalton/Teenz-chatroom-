@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useStories } from '../../hooks/useStories.js'
 import { useAuth } from '../../features/auth/AuthContext.jsx'
 import { uploadStory } from '../../services/storiesService.js'
@@ -15,8 +16,21 @@ const StoriesBar = () => {
   const [viewingStories, setViewingStories] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [showAddMenu, setShowAddMenu] = useState(false)
+  const [menuPosition, setMenuPosition] = useState(null)
   const [showTextComposer, setShowTextComposer] = useState(false)
   const [showAudioComposer, setShowAudioComposer] = useState(false)
+  const fabRef = useRef(null)
+  const photoInputRef = useRef(null)
+  const videoInputRef = useRef(null)
+
+  const handleOpenMenu = (e) => {
+    e.stopPropagation()
+    if (!showAddMenu && fabRef.current) {
+      const rect = fabRef.current.getBoundingClientRect()
+      setMenuPosition({ left: rect.left, top: rect.top })
+    }
+    setShowAddMenu(v => !v)
+  }
 
   const handleAddStory = async (e) => {
     const file = e.target.files[0]
@@ -61,26 +75,39 @@ const StoriesBar = () => {
           {/* Small FAB add button */}
           <div style={{ position: 'relative' }}>
             <button
+              ref={fabRef}
               className="story-add-fab"
               title={uploading ? 'Uploading…' : 'Add story'}
-              onClick={(e) => { e.stopPropagation(); setShowAddMenu(v => !v) }}
+              onClick={handleOpenMenu}
               disabled={uploading}
             >
               {uploading ? '⏳' : '+'}
             </button>
-            {showAddMenu && (
-              <div className="story-add-menu" onClick={e => e.stopPropagation()}>
-                <label className="story-add-menu-item">
-                  <input type="file" accept="image/*,video/*" onChange={(e) => { setShowAddMenu(false); handleAddStory(e) }} style={{ display: 'none' }} />
-                  🖼️ Photo / Video
-                </label>
-                <button className="story-add-menu-item" onClick={() => { setShowAddMenu(false); setShowTextComposer(true) }}>
-                  ✏️ Text status
-                </button>
-                <button className="story-add-menu-item" onClick={() => { setShowAddMenu(false); setShowAudioComposer(true) }}>
-                  🎤 Audio status
-                </button>
-              </div>
+            <input ref={photoInputRef} type="file" accept="image/*" onChange={(e) => { setShowAddMenu(false); handleAddStory(e) }} style={{ display: 'none' }} />
+            <input ref={videoInputRef} type="file" accept="video/*" onChange={(e) => { setShowAddMenu(false); handleAddStory(e) }} style={{ display: 'none' }} />
+            {showAddMenu && menuPosition && createPortal(
+              <>
+                <div className="story-add-menu-backdrop" onClick={() => setShowAddMenu(false)} />
+                <div
+                  className="story-add-menu story-add-menu-portal"
+                  style={{ left: menuPosition.left, top: menuPosition.top }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <button className="story-add-menu-item" onClick={() => { setShowAddMenu(false); photoInputRef.current?.click() }}>
+                    📷 Photo status
+                  </button>
+                  <button className="story-add-menu-item" onClick={() => { setShowAddMenu(false); videoInputRef.current?.click() }}>
+                    🎥 Video status
+                  </button>
+                  <button className="story-add-menu-item" onClick={() => { setShowAddMenu(false); setShowTextComposer(true) }}>
+                    ✏️ Text status
+                  </button>
+                  <button className="story-add-menu-item" onClick={() => { setShowAddMenu(false); setShowAudioComposer(true) }}>
+                    🎤 Audio status
+                  </button>
+                </div>
+              </>,
+              document.body
             )}
           </div>
         </div>

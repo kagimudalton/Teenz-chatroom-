@@ -29,7 +29,7 @@ import { getActiveHoliday, isHolidayThemeEnabled, setHolidayThemeEnabled } from 
 import HolidayOverlay from '../components/ui/HolidayOverlay.jsx'
 
 const ChatPage = () => {
-  const { userProfile, logout, user, refreshProfile } = useAuth()
+  const { userProfile, user, refreshProfile } = useAuth()
   const { conversations, loading: convsLoading } = useConversations()
   const { groups, loading: groupsLoading } = useGroups()
   const callHook = useCall()
@@ -308,7 +308,7 @@ const ChatPage = () => {
                 {activeHoliday.particle}
               </button>
             )}
-            <button className="logout-btn" onClick={logout} />
+            <button className="theme-toggle-btn" onClick={() => setShowProfile(true)} title="Settings">⚙️</button>
           </div>
         </div>
 

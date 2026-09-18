@@ -940,7 +940,7 @@ input,textarea{font-family:inherit;color:inherit}
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  font-size: 1.3rem;
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1032,29 +1032,16 @@ input,textarea{font-family:inherit;color:inherit}
 .call-ctrl-btn {
   width: 65px !important;
   height: 65px !important;
-  font-size: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
   position: relative;
 }
 
-.call-ctrl-btn::after {
-  font-size: 1.6rem;
-}
-
-/* Mute button */
-.call-ctrl-btn:not(.hang-up):not(.active-ctrl):nth-child(1)::after { content: '🎤'; }
-.call-ctrl-btn.active-ctrl:nth-child(1)::after { content: '🔇'; }
-
-/* Hang up */
 .call-ctrl-btn.hang-up {
   width: 72px !important;
   height: 72px !important;
-}
-.call-ctrl-btn.hang-up::after { content: ''; font-size: 0; }
-.call-ctrl-btn.hang-up {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.68.28-.27 0-.52-.11-.7-.29L.29 13.08c-.18-.18-.29-.43-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .27-.11.52-.29.7l-2.51 2.51c-.18.18-.43.29-.7.29-.25 0-.5-.1-.68-.28-.79-.73-1.68-1.36-2.66-1.85-.33-.16-.56-.51-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z'/%3E%3C/svg%3E") !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-  background-size: 32px !important;
 }
 
 /* ─── WALLPAPER CONTAINMENT FIX ─── */
@@ -2160,6 +2147,25 @@ img[referrerpolicy="no-referrer"] {
   animation: none;
 }
 
+.install-app-status {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.signout-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: rgba(255,68,68,0.12);
+  border: 1px solid rgba(255,68,68,0.3);
+  color: #ff6b6b;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.signout-btn:hover {
+  background: rgba(255,68,68,0.2);
+}
+
 .ios-install-steps {
   text-align: left;
   font-size: 0.85rem;
@@ -2524,6 +2530,19 @@ img[referrerpolicy="no-referrer"] {
   min-width: 170px;
   z-index: 60;
   animation: slideUp 0.15s ease;
+}
+.story-add-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 998;
+  background: transparent;
+}
+.story-add-menu-portal {
+  position: fixed;
+  bottom: auto;
+  transform: translateY(calc(-100% - 8px));
+  z-index: 999;
+  box-shadow: var(--shadow-float);
 }
 .story-add-menu-item {
   display: flex;

@@ -12,7 +12,7 @@ import InstallAppButton from '../components/ui/InstallAppButton.jsx'
 import toast from 'react-hot-toast'
 
 const ProfilePage = ({ onClose }) => {
-  const { user, userProfile, refreshProfile } = useAuth()
+  const { user, userProfile, refreshProfile, logout } = useAuth()
   const [username, setUsername] = useState(userProfile?.username || '')
   const [bio, setBio] = useState(userProfile?.bio || '')
   const [showLastSeen, setShowLastSeen] = useState(userProfile?.showLastSeen !== false)
@@ -141,6 +141,13 @@ const ProfilePage = ({ onClose }) => {
           <div className="security-settings">
             <h3>App</h3>
             <InstallAppButton variant="settings" />
+          </div>
+
+          {/* Sign out */}
+          <div className="security-settings">
+            <button className="signout-btn" onClick={logout}>
+              🚪 Sign out
+            </button>
           </div>
 
           {/* Save */}
